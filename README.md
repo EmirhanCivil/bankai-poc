@@ -149,6 +149,7 @@ curl -X POST http://localhost:8080/v1/chat/completions \
 | [docs/architecture/OPENWEBUI.md](docs/architecture/OPENWEBUI.md) | OpenWebUI entegrasyonu |
 | [docs/architecture/LIBRECHAT.md](docs/architecture/LIBRECHAT.md) | LibreChat entegrasyonu |
 | [docs/architecture/KARSILASTIRMA.md](docs/architecture/KARSILASTIRMA.md) | UI karsilastirmasi |
+| [docs/architecture/ISTEK_AKISI.md](docs/architecture/ISTEK_AKISI.md) | Bir istegin bastan sona yolculugu |
 | [docs/architecture/topology.drawio](docs/architecture/topology.drawio) | Topoloji diyagrami (Draw.io) |
 
 ## Bilinen Kisitlamalar (PoC)
