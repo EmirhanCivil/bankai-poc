@@ -1,0 +1,21 @@
+version: 1.2.1
+cache: true
+registration:
+  socialLogins: []
+
+endpoints:
+  custom:
+    - name: "Bankai RAG"
+      apiKey: "sk-bankai"
+      baseURL: "http://host.docker.internal:8000/v1"
+      models:
+        default: ["qwen2.5:7b-instruct"]
+        fetch: true
+      titleConvo: true
+      titleModel: "qwen2.5:7b-instruct"
+      summarize: false
+      dropParams:
+        - "stop"
+        - "frequency_penalty"
+        - "presence_penalty"
+        - "top_p"

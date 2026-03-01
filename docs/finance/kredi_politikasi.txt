@@ -1,0 +1,15 @@
+Bankamızın kredi tahsis politikası aşağıdaki esaslara göre belirlenir.
+
+Bireysel kredi limiti müşterinin aylık gelirinin 12 katını geçemez.
+
+Konut kredisi için minimum yüzde 20 peşinat zorunludur. Vade en fazla 120 aydır.
+
+Taşıt kredisi için minimum yüzde 30 peşinat gerekir. Vade en fazla 60 aydır.
+
+Ticari kredilerde teminat oranı en az yüzde 120 olmalıdır. Gayrimenkul, menkul kıymet veya banka teminat mektubu kabul edilir.
+
+Kredi notu 1400 altında olan müşterilere yeni kredi kullandırılmaz.
+
+Toplam kredi riski özkaynakların yüzde 25'ini geçemez. Bu oran BDDK düzenlemelerine uygun olarak hesaplanır.
+
+Tahsili gecikmiş alacaklar (TGA) oranı yüzde 5'i geçtiğinde kredi komitesi acil toplantıya çağrılır.

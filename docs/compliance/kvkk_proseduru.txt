@@ -1,0 +1,13 @@
+Kişisel Verilerin Korunması Kanunu (KVKK) kapsamında bankamızın uyguladığı prosedürler aşağıdadır.
+
+Müşteri verilerinin işlenmesi için açık rıza alınması zorunludur. Rıza formları dijital ortamda saklanır.
+
+Veri saklama süreleri: Müşteri kimlik bilgileri hesap kapanışından itibaren 10 yıl, işlem kayıtları 10 yıl, iletişim kayıtları 3 yıl saklanır.
+
+Veri ihlali tespit edildiğinde 72 saat içinde Kişisel Verileri Koruma Kurulu'na bildirim yapılır.
+
+Müşteriler kendi verilerine erişim, düzeltme ve silme talep edebilir. Bu talepler 30 gün içinde yanıtlanmalıdır.
+
+Üçüncü taraflarla veri paylaşımında veri işleme sözleşmesi imzalanması zorunludur.
+
+Yılda en az iki kez KVKK uyum denetimi yapılır. Denetim sonuçları yönetim kuruluna raporlanır.

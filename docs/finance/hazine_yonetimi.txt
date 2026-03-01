@@ -1,0 +1,15 @@
+Bankamızın hazine ve likidite yönetim politikası aşağıdaki ilkelere göre yürütülür.
+
+Likidite karşılama oranı (LKO) en az yüzde 100 olmalıdır. Günlük hesaplama yapılır.
+
+Döviz pozisyonu limiti özkaynakların yüzde 20'sini geçemez. Açık pozisyon günlük raporlanır.
+
+Devlet tahvili ve hazine bonosu portföyü toplam aktiflerin en az yüzde 15'ini oluşturmalıdır.
+
+Bankalararası para piyasası işlemlerinde karşı taraf limiti tek bir banka için özkaynakların yüzde 10'unu geçemez.
+
+Faiz oranı riski ölçümünde Duration Gap analizi kullanılır. Gap limiti 2 yılı geçemez.
+
+Günlük nakit akış tahmini hazine birimi tarafından her sabah 09:00'da hazırlanır ve üst yönetime raporlanır.
+
+Stres testi senaryoları çeyreklik olarak güncellenir ve sonuçlar risk komitesine sunulur.

@@ -1,0 +1,13 @@
+Bankamızın iç denetim prosedürleri BDDK düzenlemelerine uygun olarak yürütülür.
+
+İç denetim birimi doğrudan yönetim kuruluna bağlıdır ve bağımsız çalışır.
+
+Yıllık denetim planı her yılın Ocak ayında hazırlanır ve yönetim kurulu onayına sunulur.
+
+Şube denetimleri yılda en az bir kez yapılır. Yüksek riskli şubeler yılda iki kez denetlenir.
+
+Denetim bulgularına 30 gün içinde aksiyon planı hazırlanmalıdır. Kritik bulgularda süre 15 gündür.
+
+Operasyonel risk değerlendirmesi çeyreklik olarak güncellenir. Risk matrisi düşük, orta, yüksek ve kritik olmak üzere dört seviyeden oluşur.
+
+Denetim raporları 7 yıl süreyle arşivlenir.

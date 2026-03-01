@@ -1,0 +1,27 @@
+services:
+  librechat:
+    image: ghcr.io/danny-avila/librechat-dev:latest
+    container_name: librechat
+    ports:
+      - "3080:3080"
+    depends_on:
+      - mongodb
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    env_file:
+      - .env
+    volumes:
+      - ./librechat.yaml:/app/librechat.yaml:ro
+      - librechat_images:/app/client/public/images
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:8.0
+    container_name: librechat-mongodb
+    volumes:
+      - librechat_mongo:/data/db
+    restart: unless-stopped
+
+volumes:
+  librechat_mongo:
+  librechat_images:

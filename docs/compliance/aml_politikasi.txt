@@ -1,0 +1,15 @@
+Bankamızın Kara Para Aklama ile Mücadele (AML) Politikası aşağıdaki esasları kapsar.
+
+Tüm müşteri işlemleri günlük bazda izlenir ve şüpheli işlem raporları (ŞİR) oluşturulur.
+
+10.000 TL ve üzeri nakit işlemler otomatik olarak MASAK'a bildirilir.
+
+Müşteri kimlik doğrulaması (KYC) her hesap açılışında zorunludur. Kimlik belgesi, adres belgesi ve vergi numarası talep edilir.
+
+Yüksek riskli ülkelerden gelen transferlerde ek inceleme yapılır. Risk ülkeleri listesi her çeyrekte güncellenir.
+
+Şüpheli işlem tespit edildiğinde işlem durdurulur ve uyum birimine bildirilir. Uyum birimi 24 saat içinde değerlendirme yapar.
+
+PEP (Siyasi Nüfuz Sahibi Kişiler) müşteriler için yıllık gözden geçirme zorunludur.
+
+AML eğitimi tüm çalışanlar için yılda en az bir kez düzenlenir.

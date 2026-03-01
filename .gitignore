@@ -1,0 +1,34 @@
+# Environment files (secrets, API keys)
+.env
+librechat/.env
+
+# Audit logs (may contain PII)
+audit/events.jsonl
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# OpenWebUI data
+webui.db
+
+# Docker volumes (if local)
+qdrant_data/
+
+# Sentence-transformers model cache
+.cache/
