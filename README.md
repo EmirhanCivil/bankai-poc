@@ -8,19 +8,23 @@ Banka içi dokümanlar uzerinde RBAC (Role-Based Access Control), DLP (Data Loss
   UI Katmani              Gateway               Backend
 +-----------+         +------------+         +-----------+
 | OpenWebUI | ------> |            | ------> |  Qdrant   |
-|  (:3000)  |   API   |   Bankai   |  embed  | (VectorDB)|
+|  (:3000)  |  :8000  |   Bankai   |  embed  | (VectorDB)|
 +-----------+         |  Gateway   |         +-----------+
                       |  (:8000)   |
 +-----------+         |            |         +-----------+
 | LibreChat | ------> |  FastAPI   | ------> |    OPA    |
-|  (:3080)  |   API   |            | policy  | (AuthZ)   |
+|  (:3080)  |  :8000  |            | policy  | (AuthZ)   |
 +-----------+         +-----+------+         +-----------+
                             |
 +-----------+               |                +-----------+
-|   Nginx   | <--- proxy ---|                |  Ollama   |
-|  (:8080)  |                    LLM ------> | (qwen2.5) |
+|   Nginx   |  (opsiyonel)  |                |  Ollama   |
+|  (:8080)  |  header inj.  |    LLM ------> | (qwen2.5) |
 +-----------+                                +-----------+
 ```
+
+> **Not:** Mevcut yapilandirmada her iki UI de dogrudan Gateway'e (:8000) baglanir.
+> Nginx opsiyonel bir katmandir — OpenWebUI'yi Nginx uzerinden yonlendirirseniz,
+> kullanici header'larina gore X-User/X-Roles/X-Tenant enjekte edebilir.
 
 ## Bilesenler
 
@@ -30,7 +34,7 @@ Banka içi dokümanlar uzerinde RBAC (Role-Based Access Control), DLP (Data Loss
 | **Qdrant** | 6333 | `bankai-poc-qdrant-1` | Vektor veritabani (embedding storage) |
 | **OPA** | 8181 | `bankai-poc-opa-1` | Open Policy Agent (RBAC policy engine) |
 | **Ollama** | 11434 | - (Windows host) | LLM backend (qwen2.5:7b-instruct) |
-| **Nginx** | 8080 | `bankai-nginx` | Reverse proxy (OpenWebUI icin header injection) |
+| **Nginx** | 8080 | `bankai-nginx` | Opsiyonel reverse proxy (header injection ile RBAC) |
 | **OpenWebUI** | 3000 | `openwebui` | Chat UI #1 |
 | **LibreChat** | 3080 | `librechat` | Chat UI #2 |
 | **MongoDB** | 27017 | `librechat-mongodb` | LibreChat kullanici/oturum veritabani |
