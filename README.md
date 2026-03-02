@@ -5,26 +5,26 @@ Banka içi dokümanlar uzerinde RBAC (Role-Based Access Control), DLP (Data Loss
 ## Mimari Genel Bakis
 
 ```
-  UI Katmani              Gateway               Backend
-+-----------+         +------------+         +-----------+
-| OpenWebUI | ------> |            | ------> |  Qdrant   |
-|  (:3000)  |  :8000  |   Bankai   |  embed  | (VectorDB)|
-+-----------+         |  Gateway   |         +-----------+
-                      |  (:8000)   |
-+-----------+         |            |         +-----------+
-| LibreChat | ------> |  FastAPI   | ------> |    OPA    |
-|  (:3080)  |  :8000  |            | policy  | (AuthZ)   |
-+-----------+         +-----+------+         +-----------+
-                            |
-+-----------+               |                +-----------+
-|   Nginx   |  (opsiyonel)  |                |  Ollama   |
-|  (:8080)  |  header inj.  |    LLM ------> | (qwen2.5) |
-+-----------+                                +-----------+
+  UI Katmani            Proxy             Gateway               Backend
++-----------+       +---------+       +------------+         +-----------+
+| OpenWebUI | ----> |  Nginx  | ----> |            | ------> |  Qdrant   |
+|  (:3000)  | :8080 | (:8080) | :8000 |   Bankai   |  embed  | (VectorDB)|
++-----------+       | header  |       |  Gateway   |         +-----------+
+                    | inject  |       |  (:8000)   |
++-----------+       +---------+       |            |         +-----------+
+| LibreChat | ---------------------> |  FastAPI   | ------> |    OPA    |
+|  (:3080)  |        :8000           |            | policy  | (AuthZ)   |
++-----------+                         +-----+------+         +-----------+
+                                            |
+                                            |                +-----------+
+                                       LLM ------> | Ollama   |
+                                                             | (qwen2.5) |
+                                                             +-----------+
 ```
 
-> **Not:** Mevcut yapilandirmada her iki UI de dogrudan Gateway'e (:8000) baglanir.
-> Nginx opsiyonel bir katmandir — OpenWebUI'yi Nginx uzerinden yonlendirirseniz,
-> kullanici header'larina gore X-User/X-Roles/X-Tenant enjekte edebilir.
+> **Not:** OpenWebUI, Nginx (:8080) uzerinden Gateway'e baglanir. Nginx, kullanici
+> header'larindan X-User/X-Roles/X-Tenant enjekte ederek RBAC saglar.
+> LibreChat ise dogrudan Gateway'e (:8000) baglanir.
 
 ## Bilesenler
 
@@ -34,7 +34,7 @@ Banka içi dokümanlar uzerinde RBAC (Role-Based Access Control), DLP (Data Loss
 | **Qdrant** | 6333 | `bankai-poc-qdrant-1` | Vektor veritabani (embedding storage) |
 | **OPA** | 8181 | `bankai-poc-opa-1` | Open Policy Agent (RBAC policy engine) |
 | **Ollama** | 11434 | - (Windows host) | LLM backend (qwen2.5:7b-instruct) |
-| **Nginx** | 8080 | `bankai-nginx` | Opsiyonel reverse proxy (header injection ile RBAC) |
+| **Nginx** | 8080 | `bankai-nginx` | Reverse proxy — OpenWebUI RBAC icin header injection |
 | **OpenWebUI** | 3000 | `openwebui` | Chat UI #1 |
 | **LibreChat** | 3080 | `librechat` | Chat UI #2 |
 | **MongoDB** | 27017 | `librechat-mongodb` | LibreChat kullanici/oturum veritabani |
@@ -74,7 +74,7 @@ curl -X POST http://localhost:8000/admin/reindex/compliance
 curl -X POST http://localhost:8000/admin/reindex/finance
 ```
 
-### 6. Nginx (Opsiyonel — OpenWebUI proxy)
+### 6. Nginx (OpenWebUI RBAC proxy)
 ```bash
 docker run -d --name bankai-nginx \
   --add-host host.docker.internal:host-gateway \
@@ -87,8 +87,8 @@ docker run -d --name bankai-nginx \
 ```bash
 docker run -d --name openwebui \
   -p 3000:8080 \
-  -e OPENAI_API_BASE_URL=http://host.docker.internal:8000/v1 \
-  -e OPENAI_API_KEY=sk-dummy \
+  -e OPENAI_API_BASE_URL=http://host.docker.internal:8080/v1 \
+  -e OPENAI_API_KEY=dummy \
   --add-host host.docker.internal:host-gateway \
   ghcr.io/open-webui/open-webui:main
 ```
@@ -148,7 +148,8 @@ curl -X POST http://localhost:8080/v1/chat/completions \
 | [docs/architecture/GATEWAY.md](docs/architecture/GATEWAY.md) | Gateway pipeline detaylari |
 | [docs/architecture/OPENWEBUI.md](docs/architecture/OPENWEBUI.md) | OpenWebUI entegrasyonu |
 | [docs/architecture/LIBRECHAT.md](docs/architecture/LIBRECHAT.md) | LibreChat entegrasyonu |
-| [docs/architecture/KARSILASTIRMA.md](docs/architecture/KARSILASTIRMA.md) | UI karsilastirmasi |
+| [docs/architecture/KARSILASTIRMA.md](docs/architecture/KARSILASTIRMA.md) | UI karsilastirmasi (PoC odakli) |
+| [docs/architecture/KURUMSAL_KARSILASTIRMA.md](docs/architecture/KURUMSAL_KARSILASTIRMA.md) | Kurumsal olcekte UI karsilastirmasi (500+ kisi) |
 | [docs/architecture/ISTEK_AKISI.md](docs/architecture/ISTEK_AKISI.md) | Bir istegin bastan sona yolculugu |
 | [docs/architecture/topology.drawio](docs/architecture/topology.drawio) | Topoloji diyagrami (Draw.io) |
 

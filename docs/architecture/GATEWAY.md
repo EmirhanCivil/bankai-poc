@@ -61,8 +61,8 @@ Cevap Donduruldu (stream veya non-stream)
 
 Gateway, kullanici kimligini birden fazla kaynaktan cozumleyebilir. Oncelik sirasi:
 
-1. `X-User` header'i (Nginx tarafindan enjekte edilir)
-2. `X-OpenWebUI-User-Name` header'i
+1. `X-User` header'i (Nginx tarafindan enjekte edilir — OpenWebUI akisinda aktif)
+2. `X-OpenWebUI-User-Name` header'i (Nginx X-User'a cevirmediyse fallback)
 3. `X-OpenWebUI-User-Email` header'i
 4. `req.user` body alani — dogrudan bilinen kullanici adi mi?
 5. `req.user` body alani — LibreChat MongoDB ObjectID → `LIBRECHAT_USERID_MAP`

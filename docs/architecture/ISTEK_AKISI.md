@@ -44,10 +44,30 @@ Dikkat edilecek noktalar:
 - `stream: true` = Cevabi kelime kelime gonder (canli yazma efekti)
 
 ### OpenWebUI'da olan:
-Ayni mantik, ama farklar var:
-- `user` alani gonderilmez (veya OpenWebUI'nin kendi dahili ID'sini gonderir)
-- API key `sk-dummy` olur
-- Kullanici veritabani SQLite (`webui.db`), MongoDB degil
+ali, OpenWebUI'a email/sifre ile giris yapmistir. OpenWebUI bu kullaniciyi SQLite'da (`webui.db`) tutar.
+
+ali soruyu yazip Enter'a bastiginda, OpenWebUI su HTTP istegini **Nginx'e** gonderir:
+
+```
+POST http://host.docker.internal:8080/v1/chat/completions
+Authorization: Bearer dummy
+X-OpenWebUI-User-Name: ali
+Content-Type: application/json
+
+{
+  "model": "qwen2.5:7b-instruct",
+  "messages": [
+    {"role": "user", "content": "Yillik izin suresi kac gun?"}
+  ],
+  "stream": true
+}
+```
+
+Dikkat edilecek noktalar:
+- Nginx'e gidiyor (`:8080`), dogrudan gateway'e degil
+- `X-OpenWebUI-User-Name: ali` header'i gonderiliyor
+- Nginx bu header'i okuyup `X-User: ali`, `X-Roles: hr`, `X-Tenant: hr` enjekte ederek gateway'e iletiyor
+- Bu sayede RBAC calisiyor — her kullanici kendi ekibinin dokumanlarini goruyor
 
 ### Bu asamada kullanilan veritabani:
 | UI | Veritabani | Ne tutar? |
@@ -77,8 +97,8 @@ Gelen istekteki bilgilerden "bu kim?" sorusunu cevaplar.
 Gateway birden fazla kaynaga bakar, ilk bulduguyla devam eder:
 
 ```
-1. X-User header'i var mi?           → "ali" (Nginx koyar, simdi kullanilmiyor)
-2. X-OpenWebUI-User-Name header'i?   → (OpenWebUI bazen gonderir)
+1. X-User header'i var mi?           → "ali" (Nginx koyar — OpenWebUI akisinda kullaniliyor!)
+2. X-OpenWebUI-User-Name header'i?   → (OpenWebUI gonderir, ama Nginx zaten X-User'a cevirir)
 3. body.user bilinen bir isim mi?    → "ali", "ayse", "veli" mi diye bakar
 4. body.user bir ObjectID mi?        → "69a491c78b6939fccb7a25b5" → LIBRECHAT_USERID_MAP'te arar → "ali"
 5. API key'den cikarilabilir mi?     → "sk-bankai" → APIKEY_USER_MAP'te arar → "ali"
@@ -341,7 +361,9 @@ Tum cevap tek seferde gelir.
 
 ---
 
-## BUYUK RESIM — Tek Sema
+## BUYUK RESIM — Her Iki UI Icin Sema
+
+### LibreChat Akisi:
 
 ```
 ali "Yillik izin suresi kac gun?" yazar
@@ -394,6 +416,47 @@ ali "Yillik izin suresi kac gun?" yazar
 ali ekranda cevabi gorur: "Yillik ucretli izin suresi 14 gundur. Kaynak: [1]"
 ```
 
+### OpenWebUI Akisi:
+
+```
+ali "Yillik izin suresi kac gun?" yazar
+    |
+    v
+[OPENWEBUI]  (:3000)
+    | Kullanici bilgisi: SQLite'dan alinir
+    | HTTP istegi olusturulur (header: X-OpenWebUI-User-Name: ali)
+    |
+    v
+[NGINX]  (:8080)
+    | X-OpenWebUI-User-Name: ali header'ini okur
+    | Map kurallari: ali → hr → hr
+    | Header enjekte eder: X-User: ali, X-Roles: hr, X-Tenant: hr
+    |
+    v
+[GATEWAY]  (:8000)  ← app_main.py
+    |
+    |─ (1) Kullanici Cozumleme
+    |      X-User: ali header'i var → dogrudan "ali" olarak cozumlenir
+    |      (X-User ilk oncelikli kaynak — Nginx zaten cozumledi)
+    |
+    |─ (2) DLP Giris → (3) OPA → (4) Qdrant → (5) Ollama → (6) DLP Cikis → (7) Audit
+    |      (LibreChat akisiyla ayni adimlar)
+    |
+    |─ (8) Cevap Dondur (SSE stream)
+    |
+    v
+[NGINX]  (:8080)
+    | Cevabi OpenWebUI'ya iletir
+    |
+    v
+[OPENWEBUI]
+    | Cevabi ekranda gosterir
+    | Sohbet gecmisini SQLite'a yazar
+    |
+    v
+ali ekranda cevabi gorur: "Yillik ucretli izin suresi 14 gundur. Kaynak: [1]"
+```
+
 ---
 
 ## HER BILESENIN OZETI
@@ -404,7 +467,7 @@ ali ekranda cevabi gorur: "Yillik ucretli izin suresi 14 gundur. Kaynak: [1]"
 | **OpenWebUI** | Chat UI | 3000 | Ayni isi yapar, farkli arayuz |
 | **MongoDB** | Veritabani | 27017 | LibreChat'in kullanici/sohbet verilerini tutar |
 | **SQLite** | Veritabani | - | OpenWebUI'nin kullanici/sohbet verilerini tutar (dosya) |
-| **Nginx** | Reverse Proxy | 8080 | (Opsiyonel) Istege kullanici bilgisi header'i ekler |
+| **Nginx** | Reverse Proxy | 8080 | OpenWebUI icin kullanici/rol/tenant header'i enjekte eder (RBAC) |
 | **Gateway** | API Sunucusu | 8000 | Her seyin merkezi: kimlik, yetki, arama, LLM, audit |
 | **OPA** | Policy Engine | 8181 | "Bu kullanici buna erisebilir mi?" sorusunu cevaplar |
 | **Qdrant** | Vektor DB | 6333 | Soruya en benzer dokuman parcalarini bulur |
