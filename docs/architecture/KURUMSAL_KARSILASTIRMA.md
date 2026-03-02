@@ -13,7 +13,7 @@
 | **Marka kisiti** | Yok, istedigin gibi degistir | "Open WebUI" markasi kaldiramaz (50+ kullanici) |
 | **Veritabani** | MongoDB (zorunlu) + Redis | SQLite (varsayilan) veya PostgreSQL |
 | **Mimari** | Node.js (Express) + React | Python (FastAPI) + Svelte |
-| **Container sayisi** | 3-6 (api + mongo + redis + opsiyonel) | 1 (tek container) |
+| **Container sayisi** | 3-6 (api + mongo + redis + opsiyonel) | 1-2 (tek container + Nginx veya reverse proxy) |
 | **Aktif gelistirme** | ClickHouse satin aldi (Kasim 2025), aktif | Cok aktif, buyuk topluluk |
 
 ### Lisans Farki Neden Onemli?
@@ -215,17 +215,37 @@ RAG gateway'e kullanici bilgisini nasil iletirler?
 
 | Ozellik | LibreChat | OpenWebUI |
 |---|---|---|
-| **API key** | `librechat.yaml`'da tanimlanir | Ortam degiskeni ile |
-| **request body.user** | MongoDB ObjectID gonderir | Gonderebilir (Filter ile) |
-| **Ozel header'lar** | `{{LIBRECHAT_USER_ID}}`, `{{LIBRECHAT_USER_EMAIL}}` sablonlari | `ENABLE_FORWARD_USER_INFO_HEADERS=true` ile |
-| **Gonderilen header'lar** | Yapilandirma ile (YAML'da tanimlanir) | `X-OpenWebUI-User-Name`, `X-OpenWebUI-User-Id`, `X-OpenWebUI-User-Email`, `X-OpenWebUI-User-Role` |
-| **Guvenilirlik** | Kararli (YAML'da tanimli, her zaman gider) | Bazi durumlarda header gitmeyebilir (bilinen sorun) |
+| **Baglanti** | Dogrudan Gateway'e (:8000) | Nginx (:8080) uzerinden Gateway'e |
+| **API key** | `librechat.yaml`'da tanimlanir (`sk-bankai`) | Ortam degiskeni ile (`dummy`) |
+| **Kullanici bilgisi** | `req.body.user` = MongoDB ObjectID | `X-OpenWebUI-User-Name` header → Nginx → `X-User/X-Roles/X-Tenant` |
+| **Kullanici cozumleme** | Gateway icinde (`LIBRECHAT_USERID_MAP`) | Nginx icinde (map kurallari) |
+| **RBAC calisiyor mu?** | Evet | Evet (Nginx header injection ile) |
+
+### Bankai PoC'deki Gercek Akis:
+
+**LibreChat:**
+```
+LibreChat → Gateway (:8000)
+  body.user: "69a491c78b6939fccb7a25b5"
+  Gateway: LIBRECHAT_USERID_MAP → "ali" → roller: hr → tenant: hr
+```
+
+**OpenWebUI:**
+```
+OpenWebUI → Nginx (:8080) → Gateway (:8000)
+  header: X-OpenWebUI-User-Name: ali
+  Nginx map: ali → X-User: ali, X-Roles: hr, X-Tenant: hr
+  Gateway: X-User header'ini okur → "ali"
+```
 
 ### Degerlendirme:
 
-**LibreChat biraz one cikar.** YAML'daki sablon sistemi (`{{LIBRECHAT_USER_EMAIL}}`) daha guvenilir ve ozellestirilir. OpenWebUI'da header gonderimi bazi konfigurasyonlarda sorunlu olabiliyor.
+**Her ikisi de calisir durumda.** LibreChat'te cozumleme gateway icinde yapilir (ObjectID map). OpenWebUI'da ise Nginx katmaninda yapilir (header injection). Her iki yaklasimin da avantaji var:
 
-Ancak **her iki durumda da harici bir gateway** (Bankai gibi) kullanmak en saglam cozum. Gateway, kimlik cozumlemeyi kendisi yapar, UI'a bagimli kalmaz.
+- **LibreChat:** Yeni kullanici kayit oldugunda ObjectID otomatik olusur, gateway map'ine eklenince RBAC calisir
+- **OpenWebUI:** Nginx'teki map statik — yeni kullanici icin `nginx.conf` guncellenmeli
+
+Kurumsal olcekte her iki durumda da **merkezi bir kimlik saglayici** (LDAP/SSO) kullanilmasi onerilen yaklasimdir.
 
 ---
 
@@ -255,8 +275,8 @@ Ancak **ikisi de tam compliance-grade audit icin yeterli degil**. Bankacillik se
 
 | Ozellik | LibreChat | OpenWebUI |
 |---|---|---|
-| **Minimum container** | 3 (api + mongo + redis) | **1** (tek container) |
-| **Tam kurulum** | 6 (+ meilisearch + vectordb + rag_api) | 1-2 (+ vektor DB opsiyonel) |
+| **Minimum container** | 3 (api + mongo + redis) | **2** (OpenWebUI + Nginx/reverse proxy) |
+| **Tam kurulum** | 6 (+ meilisearch + vectordb + rag_api) | 2-3 (+ vektor DB opsiyonel) |
 | **Veritabani yonetimi** | MongoDB (ayri yedekleme, ayri guncelleme) | SQLite (dosya) veya PostgreSQL |
 | **Kubernetes** | Topluluk destekli (resmi degil) | **Resmi Helm chart + Kustomize** |
 | **Kaynak tuketimi** | Daha fazla (MongoDB + Redis + Node.js) | **Daha az** (tek Python process) |
@@ -298,9 +318,9 @@ Ancak **ikisi de tam compliance-grade audit icin yeterli degil**. Bankacillik se
 | **Dahili RAG** | pgvector | 9 vektor DB secenegi | **OpenWebUI** |
 | **RAG arama kalitesi** | Vektor | Hibrit + re-ranking | **OpenWebUI** |
 | **Desteklenen dosya formatlari** | PDF, txt, docx | PDF, Word, Excel, PPT, txt | **OpenWebUI** |
-| **Kurulum basitligi** | 3-6 container | 1 container | **OpenWebUI** |
+| **Kurulum basitligi** | 3-6 container | 2-3 container (+ Nginx) | **OpenWebUI** |
 | **Kubernetes** | Topluluk | Resmi Helm | **OpenWebUI** |
-| **Backend'e kullanici bilgisi** | Sablon header (guvenilir) | Header (bazen sorunlu) | LibreChat |
+| **Backend'e kullanici bilgisi** | body.user ObjectID (gateway cozumler) | Nginx header injection (X-User/X-Roles) | Esit |
 | **Sohbet gecmisi** | MongoDB (olgun) | SQLite/PostgreSQL | Esit |
 | **Coklu LLM endpoint** | Guclu (custom endpoints) | Var ama daha sinirli | LibreChat |
 | **MCP destegi** | Tam | Sinirli | LibreChat |
@@ -317,7 +337,7 @@ Ancak **ikisi de tam compliance-grade audit icin yeterli degil**. Bankacillik se
 - **SCIM ile otomatik kullanici provizyon** gerekiyor ise (Active Directory sync)
 - **Dahili RAG** yeterli ise (ekstra gateway'e gerek yok)
 - **Audit log** zorunlu ise
-- **Hizli kurulum** isteniyor ise (tek container)
+- **Hizli kurulum** isteniyor ise (az container)
 - Marka kisiti sorun degilse ("Open WebUI" yazisi kalabilir)
 
 ### LibreChat Secilmeli — Eger:
@@ -336,7 +356,7 @@ Nedenleri:
 2. SCIM ile Active Directory'den 500 kullaniciyi otomatik senkronize edebilirsin
 3. Admin panelinden her seyi yonetebilirsin (YAML dosyasi duzenlemek yerine)
 4. Dahili RAG yeterli — her ekip icin ayri bilgi tabani, ayri model, ayri erisim
-5. Tek container — operasyonel yuklenme minimum
+5. Az container (OpenWebUI + Nginx) — operasyonel yuklenme minimum
 6. Audit log kutudan cikiyor
 
 **Eger beyaz etiketleme ve harici RAG gateway sart ise:** OpenWebUI + Bankai Gateway kombinasyonu. UI olarak OpenWebUI, RAG ve RBAC icin Bankai Gateway.
@@ -350,11 +370,12 @@ Nedenleri:
 ### OpenWebUI (Minimum Production)
 ```
 1 x OpenWebUI container
+1 x Nginx / Reverse Proxy (RBAC header injection icin)
 1 x PostgreSQL (SQLite yerine)
 1 x Qdrant veya ChromaDB (vektor DB)
 1 x Ollama (LLM)
 ---
-Toplam: 3-4 container
+Toplam: 4-5 container
 ```
 
 ### LibreChat (Minimum Production)
