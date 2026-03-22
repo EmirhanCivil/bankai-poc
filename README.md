@@ -1,14 +1,18 @@
-# Bankai - Enterprise RAG Gateway
+# Bankai - Kurumsal RAG Gateway
 
-Banking-grade Retrieval-Augmented Generation (RAG) gateway with Keycloak SSO, group-based RBAC, DLP, guardrails, and centralized logging.
+Keycloak SSO, grup bazli erisim kontrolu (RBAC), veri sizinti onleme (DLP), guvenlik katmanlari (guardrail) ve merkezi loglama ile donatiilmis, banka/kurumsal seviye bir RAG (Retrieval-Augmented Generation) gateway.
 
-> **Note:** This is a PoC (Proof of Concept) demonstrating enterprise-grade RAG architecture. Not production-ready without additional hardening.
+> **Not:** Bu proje kurumsal seviye RAG mimarisini gosteren bir PoC (Proof of Concept) uygulamasidir. Production kullanimi icin ek guvenlik sertlestirmesi gereklidir.
 
-## Architecture
+[English version below](#english)
+
+---
+
+## Mimari
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                         BROWSER                                     │
+│                        TARAYICI                                     │
 │                                                                     │
 │   ┌──────────────┐         ┌──────────────────┐                     │
 │   │  LibreChat    │◄───────►│    Keycloak       │                    │
@@ -22,15 +26,16 @@ Banking-grade Retrieval-Augmented Generation (RAG) gateway with Keycloak SSO, gr
 │                    BANKAI RAG GATEWAY (:8000)                        │
 │                                                                      │
 │  ┌─────────┐  ┌──────────┐  ┌─────────┐  ┌───────────┐  ┌────────┐ │
-│  │ JWT Auth │  │ Guardrails│  │   OPA   │  │ Retrieval │  │  LLM   │ │
-│  │ Keycloak │─►│ DLP      │─►│ Policy  │─►│ Qdrant    │─►│ Ollama │ │
-│  │ Groups   │  │ Injection│  │ Check   │  │ Search    │  │        │ │
+│  │ JWT      │  │ Guvenlik │  │   OPA   │  │ Vektör    │  │  LLM   │ │
+│  │ Dogrulama│─►│ Katmani  │─►│ Politika│─►│ Arama     │─►│ Ollama │ │
+│  │ Keycloak │  │ DLP      │  │ Kontrol │  │ Qdrant    │  │        │ │
+│  │ Gruplar  │  │ Enjeksiyn│  │         │  │           │  │        │ │
 │  │          │  │ Toxic    │  │         │  │           │  │        │ │
 │  │          │  │ Rate Lim │  │         │  │           │  │        │ │
 │  └─────────┘  └──────────┘  └─────────┘  └───────────┘  └────────┘ │
 │                                                                      │
 │  ┌──────────────────────────────────────────────────────────────┐    │
-│  │                    AUDIT LOG (JSONL)                          │    │
+│  │                  DENETIM KAYDI (JSONL)                        │    │
 │  └──────────────────────────────────────────────────────────────┘    │
 └──────────────────────────────────────────────────────────────────────┘
            │                    │                          │
@@ -38,162 +43,167 @@ Banking-grade Retrieval-Augmented Generation (RAG) gateway with Keycloak SSO, gr
 ┌──────────────┐    ┌──────────────┐            ┌──────────────────┐
 │   Qdrant     │    │     OPA      │            │     Ollama       │
 │   :6333      │    │    :8181     │            │    :11434        │
-│  Vector DB   │    │  Policy Eng  │            │   LLM Backend    │
+│  Vektör DB   │    │  Politika    │            │   LLM Backend    │
 └──────────────┘    └──────────────┘            └──────────────────┘
 
 ┌──────────────────────────────────────────────────────────────────────┐
-│                      MONITORING STACK                                 │
+│                      IZLEME (MONITORING)                             │
 │                                                                      │
 │  ┌──────────┐    ┌──────────┐    ┌──────────────┐                   │
 │  │ Promtail │───►│   Loki   │◄───│   Grafana    │                   │
-│  │ Collector │    │  :3100   │    │   :3001      │                   │
+│  │ Toplayici │    │  :3100   │    │   :3001      │                   │
 │  └──────────┘    └──────────┘    └──────────────┘                   │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
-## Request Flow
+## Istek Akisi
 
 ```
-User Question
+Kullanici Sorusu
      │
      ▼
-[1] JWT Validation ──── Invalid? ──► 401 Unauthorized
+[1]  JWT Dogrulama ────── Gecersiz? ──► 401 Yetkisiz
      │
      ▼
-[2] Rate Limit Check ── Exceeded? ──► 429 Too Many Requests
+[2]  Rate Limit ─────── Asildi? ────► 429 Cok Fazla Istek
      │
      ▼
-[3] Input Size Check ── Too Long? ──► 400 Bad Request
+[3]  Girdi Uzunlugu ──── Uzun? ─────► 400 Girdi Cok Uzun
      │
      ▼
-[4] Toxic Filter ────── Detected? ──► 400 Inappropriate Content
+[4]  Toxic Filtre ────── Tespit? ───► 400 Uygunsuz Icerik
      │
      ▼
-[5] Injection Check ─── Detected? ──► 400 Security Violation
+[5]  Enjeksiyon Kontrol ─ Tespit? ──► 400 Guvenlik Ihlali
      │
      ▼
-[6] DLP Masking (input) ── TCKN, IBAN, Card, Phone, Email masked
+[6]  DLP Maskeleme (girdi) ── TCKN, IBAN, Kart, Tel, E-posta
      │
      ▼
-[7] OPA Policy Check ── Denied? ───► 403 Policy Deny
+[7]  OPA Politika Kontrol ── Red? ──► 403 Erisim Engeli
      │
      ▼
-[8] Qdrant Retrieval ── No results? ► "Bilgi bulunamadı"
+[8]  Qdrant Vektör Arama ── Sonuc yok? ► "Bilgi bulunamadi"
      │
      ▼
-[9] LLM Generation (Ollama)
+[9]  LLM Uretimi (Ollama)
      │
      ▼
-[10] Output Size Check ── Truncate if needed
+[10] Cikti Uzunlugu ──── Kesildi mi?
      │
      ▼
-[11] Toxic Filter (output)
+[11] Toxic Filtre (cikti)
      │
      ▼
-[12] Hallucination Check ── Low overlap? ► Warning appended
+[12] Halusinasyon Kontrol ── Dusuk ortusme? ► Uyari eklendi
      │
      ▼
-[13] DLP Masking (output)
+[13] DLP Maskeleme (cikti)
      │
      ▼
-[14] Audit Log ──► Loki ──► Grafana Dashboard
+[14] Denetim Kaydi ──► Loki ──► Grafana Dashboard
      │
      ▼
-  Response
+  Cevap
 ```
 
-## Features
+## Ozellikler
 
-### Authentication & Authorization
-- **Keycloak SSO** — Single Sign-On, no email/password login
-- **Group-based RBAC** — Users belong to Keycloak groups (HR, Finance, BT, etc.)
-- **JWT validation** — Gateway validates Keycloak JWT, extracts username and groups
-- **OPA policies** — Fine-grained access control per document collection
+### Kimlik Dogrulama ve Yetkilendirme
+- **Keycloak SSO** — Tek Oturum Acma, e-posta/sifre ile giris yok
+- **Grup bazli RBAC** — Kullanicilar Keycloak gruplarina aittir (IK, Finans, BT vb.)
+- **JWT dogrulama** — Gateway Keycloak JWT'sini dogrular, kullanici adi ve grup bilgisi cikarir
+- **OPA politikalari** — Dokuman koleksiyonu bazinda ince taneli erisim kontrolu
 
-### Guardrails
-| Guardrail | Description |
-|-----------|-------------|
-| **DLP** | Masks TCKN, IBAN, credit card (Luhn), phone, email in both input and output |
-| **Prompt Injection** | Detects manipulation attempts in Turkish and English |
-| **Toxic Content** | Blocks profanity and inappropriate language (TR/EN) |
-| **Rate Limiting** | Per-user limits (default: 15/min, 100/hour) |
-| **Input/Output Limits** | Max character limits (default: 4K input, 8K output) |
-| **Hallucination Detection** | Warns when response doesn't align with source documents |
+### Guvenlik Katmanlari (Guardrails)
+| Katman | Aciklama |
+|--------|----------|
+| **DLP** | TCKN, IBAN, kredi karti (Luhn), telefon, e-posta maskeleme — girdi ve ciktida |
+| **Prompt Enjeksiyon** | "Talimatlari unut", "system prompt goster" gibi saldirilari tespit (TR/EN) |
+| **Toxic Icerik** | Kufur ve uygunsuz dil engelleme (TR/EN) |
+| **Rate Limiting** | Kullanici basi istek siniri (varsayilan: 15/dk, 100/saat) |
+| **Girdi/Cikti Siniri** | Maksimum karakter siniri (varsayilan: 4K girdi, 8K cikti) |
+| **Halusinasyon Tespiti** | Cevap kaynak dokumanlarla ortusmuyor ise uyari |
 
-### Monitoring
-- **Grafana dashboard** — Request rates, OPA denies, DLP events, Keycloak events, errors
-- **Loki** — Log aggregation with label-based querying
-- **Promtail** — Automatic Docker + file log collection
+### Izleme (Monitoring)
+- **Grafana dashboard** — Istek oranlari, OPA redleri, DLP olaylari, Keycloak olaylari, hatalar
+- **Loki** — Etiket bazli sorgulama ile log toplama
+- **Promtail** — Otomatik Docker + dosya log toplama
 
-## Quick Start
+### Arayuz
+- **LibreChat** — Lacivert "Bankai AI" temasi, sadece Keycloak SSO ile giris
+- Kullanici basi JWT gateway'e iletilir
 
-### Prerequisites
-- Docker Desktop (with WSL2 if on Windows)
-- [Ollama](https://ollama.com/) with `qwen2.5:7b-instruct`:
+## Hizli Kurulum
+
+### On Kosullar
+- Docker Desktop (Windows'ta WSL2 ile)
+- [Ollama](https://ollama.com/) kurulu ve calisiyor
+- Model indirilmis:
   ```bash
   ollama pull qwen2.5:7b-instruct
   ```
 - Python 3.10+
 
-### 1. Clone and configure
+### 1. Klonla ve yapilandir
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/bankai-poc.git
+git clone https://github.com/EmirhanCivil/bankai-poc.git
 cd bankai-poc
 
-# Gateway config
+# Gateway yapilandirmasi
 cp .env.example .env
-# Edit .env — set OLLAMA_HOST to your Ollama IP
-# WSL2 users: ip route show default | awk '{print $3}'
+# .env dosyasini duzenle — OLLAMA_HOST'u Ollama IP'niz ile degistirin
+# WSL2 kullanicilari: ip route show default | awk '{print $3}'
 
-# LibreChat config
+# LibreChat yapilandirmasi
 cp librechat/.env.example librechat/.env
-# Edit librechat/.env — change all CHANGE_ME values
+# librechat/.env dosyasindaki tum CHANGE_ME degerlerini degistirin
 ```
 
-### 2. Start infrastructure
+### 2. Altyapiyi baslat
 
 ```bash
-# Core services (Qdrant, OPA, Keycloak, Loki, Grafana, Promtail)
+# Temel servisler (Qdrant, OPA, Keycloak, Loki, Grafana, Promtail)
 docker compose up -d
 
 # LibreChat
 cd librechat && docker compose up -d && cd ..
 ```
 
-### 3. Setup Keycloak
+### 3. Keycloak Kurulumu
 
-Wait for Keycloak to start (~30s), then open http://localhost:8443 and login with `admin`/`admin`.
+Keycloak'in baslamasini bekleyin (~30sn), ardindan http://localhost:8443 adresini acin (`admin`/`admin`).
 
-**Create realm and clients:**
+**Realm, client ve gruplari olusturun:**
 
 ```bash
-# Get admin token
+# Admin token al
 TOKEN=$(curl -s -X POST "http://localhost:8443/realms/master/protocol/openid-connect/token" \
   -d "client_id=admin-cli" -d "username=admin" -d "password=admin" \
   -d "grant_type=password" | python3 -c "import sys,json;print(json.load(sys.stdin)['access_token'])")
 
-# Create bankai realm
+# bankai realm olustur
 curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   "http://localhost:8443/admin/realms" -d '{"realm":"bankai","enabled":true}'
 
-# Create librechat client (use same secret as in librechat/.env)
+# librechat client olustur (secret'i librechat/.env'deki ile ayni yapın)
 curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   "http://localhost:8443/admin/realms/bankai/clients" \
   -d '{
     "clientId":"librechat","enabled":true,"protocol":"openid-connect",
-    "publicClient":false,"secret":"YOUR_CLIENT_SECRET_HERE",
+    "publicClient":false,"secret":"LIBRECHAT_ENV_DEKI_SECRET",
     "redirectUris":["http://localhost:3080/*"],"webOrigins":["*"],
     "directAccessGrantsEnabled":true
   }'
 
-# Create groups
+# Is birimi gruplarini olustur
 for G in HR Compliance Finance BT Risk Hukuk; do
   curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
     "http://localhost:8443/admin/realms/bankai/groups" -d "{\"name\":\"$G\"}"
 done
 
-# Add groups claim mapper to client
+# JWT'ye grup bilgisi ekleyen mapper olustur
 CLIENT_UUID=$(curl -s -H "Authorization: Bearer $TOKEN" \
   "http://localhost:8443/admin/realms/bankai/clients?clientId=librechat" \
   | python3 -c "import sys,json;print(json.load(sys.stdin)[0]['id'])")
@@ -205,24 +215,24 @@ curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/
                  "claim.name":"groups","userinfo.token.claim":"true"}}'
 ```
 
-**Create users** (repeat for each user/group):
+**Kullanici olusturun** (her kullanici/grup icin tekrarlayin):
 
 ```bash
-# Create user
+# Kullanici olustur
 curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   "http://localhost:8443/admin/realms/bankai/users" \
   -d '{"username":"ali","firstName":"Ali","email":"ali@bankai.local","enabled":true}'
 
-# Set password
+# Sifre belirle
 USER_ID=$(curl -s -H "Authorization: Bearer $TOKEN" \
   "http://localhost:8443/admin/realms/bankai/users?username=ali" \
   | python3 -c "import sys,json;print(json.load(sys.stdin)[0]['id'])")
 
 curl -s -X PUT -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   "http://localhost:8443/admin/realms/bankai/users/$USER_ID/reset-password" \
-  -d '{"type":"password","value":"YourPassword123!","temporary":false}'
+  -d '{"type":"password","value":"SifreGirin123!","temporary":false}'
 
-# Assign to group
+# Gruba ata
 GROUP_ID=$(curl -s -H "Authorization: Bearer $TOKEN" \
   "http://localhost:8443/admin/realms/bankai/groups?search=HR" \
   | python3 -c "import sys,json;print(json.load(sys.stdin)[0]['id'])")
@@ -231,7 +241,7 @@ curl -s -X PUT -H "Authorization: Bearer $TOKEN" \
   "http://localhost:8443/admin/realms/bankai/users/$USER_ID/groups/$GROUP_ID"
 ```
 
-### 4. Start the gateway
+### 4. Gateway'i baslat
 
 ```bash
 python3 -m venv .venv
@@ -240,7 +250,7 @@ pip install -r requirements.txt
 uvicorn app_main:app --host 0.0.0.0 --port 8000
 ```
 
-### 5. Index documents
+### 5. Dokumanlari indexle
 
 ```bash
 for TENANT in hr compliance finance bt risk hukuk; do
@@ -248,95 +258,125 @@ for TENANT in hr compliance finance bt risk hukuk; do
 done
 ```
 
-### 6. Access
+### 6. Erisim
 
-| Service | URL | Credentials |
-|---------|-----|-------------|
+| Servis | URL | Giris Bilgileri |
+|--------|-----|-----------------|
 | **LibreChat** | http://localhost:3080 | Keycloak SSO |
-| **Keycloak Admin** | http://localhost:8443 | admin / admin |
+| **Keycloak Yonetim** | http://localhost:8443 | admin / admin |
 | **Grafana** | http://localhost:3001 | admin / bankai |
 | **Gateway API** | http://localhost:8000 | JWT Bearer token |
 
-## Project Structure
+## Proje Yapisi
 
 ```
 bankai-poc/
-├── app_main.py                 # RAG Gateway (FastAPI) — auth, guardrails, pipeline
-├── docker-compose.yml          # Qdrant + OPA + Keycloak + Monitoring stack
-├── .env.example                # Gateway env template
-├── requirements.txt            # Python dependencies
+├── app_main.py                 # RAG Gateway (FastAPI) — kimlik, guvenlik, pipeline
+├── docker-compose.yml          # Qdrant + OPA + Keycloak + Izleme
+├── .env.example                # Gateway ortam degiskeni sablonu
+├── requirements.txt            # Python bagimliliklari
 ├── policies/
-│   └── rag.rego                # OPA access control policies
-├── docs/                       # Document collections (one dir per group)
-│   ├── hr/                     # HR policies (Turkish)
-│   ├── compliance/             # AML, KVKK, internal audit
-│   ├── finance/                # Budget, treasury, credit
-│   ├── bt/                     # IT security, dev standards, infra
-│   ├── risk/                   # Operational, credit, market risk
-│   └── hukuk/                  # Contracts, legal compliance, labor law
+│   └── rag.rego                # OPA erisim politikalari
+├── docs/                       # Dokuman koleksiyonlari (grup basina dizin)
+│   ├── hr/                     # IK politikalari (Turkce)
+│   ├── compliance/             # AML, KVKK, ic denetim
+│   ├── finance/                # Butce, hazine, kredi
+│   ├── bt/                     # BT guvenlik, gelistirme, altyapi
+│   ├── risk/                   # Operasyonel, kredi, piyasa riski
+│   └── hukuk/                  # Sozlesme, yasal uyum, is hukuku
 ├── librechat/
 │   ├── docker-compose.yml      # LibreChat + MongoDB
-│   ├── .env.example            # LibreChat env template
-│   ├── librechat.yaml          # Custom endpoint config
-│   ├── openidStrategy.js       # Patched OIDC strategy (HTTP + URL rewrite)
-│   ├── custom.css              # Navy blue theme
-│   └── index.html              # Branded "Bankai AI" page
+│   ├── .env.example            # LibreChat ortam degiskeni sablonu
+│   ├── librechat.yaml          # Endpoint yapilandirmasi
+│   ├── openidStrategy.js       # Yamali OIDC stratejisi (HTTP + URL yeniden yazma)
+│   ├── custom.css              # Lacivert tema
+│   └── index.html              # "Bankai AI" markali sayfa
 ├── monitoring/
-│   ├── loki-config.yml         # Loki log storage config
-│   ├── promtail-config.yml     # Log collector config
+│   ├── loki-config.yml         # Loki log depolama yapilandirmasi
+│   ├── promtail-config.yml     # Log toplayici yapilandirmasi
 │   └── grafana/
-│       ├── dashboards/         # Pre-built Grafana dashboards
-│       └── provisioning/       # Auto-provisioning (datasource + dashboards)
-└── audit/                      # Runtime audit logs (gitignored)
+│       ├── dashboards/         # Hazir Grafana panolari
+│       └── provisioning/       # Otomatik yapilandirma
+└── audit/                      # Calisma zamani denetim kayitlari (git'e dahil degil)
 ```
 
-## Adding New Groups
+## Dokuman Koleksiyonlari
 
-1. Create group in Keycloak admin panel
-2. Create document directory: `mkdir docs/newgroup`
-3. Add `.txt` or `.md` files
-4. Add OPA policy rule in `policies/rag.rego`:
+Her grubun kendi dokuman koleksiyonu vardir. Kullanicilar yalnizca kendi gruplarina ait dokumanlari sorgulayabilir.
+
+| Grup | Koleksiyon | Dokumanlar |
+|------|-----------|------------|
+| IK | `hr` | Izin politikasi, yan haklar, calisma saatleri |
+| Uyum | `compliance` | AML politikasi, KVKK proseduru, ic denetim |
+| Finans | `finance` | Butce yonetimi, hazine, kredi politikasi |
+| BT | `bt` | Guvenlik politikasi, gelistirme standartlari, altyapi |
+| Risk | `risk` | Operasyonel risk, kredi riski, piyasa riski |
+| Hukuk | `hukuk` | Sozlesme yonetimi, yasal uyum, is hukuku |
+
+## Yeni Grup Ekleme
+
+1. Keycloak yonetim panelinden grup olusturun
+2. Dokuman dizini olusturun: `mkdir docs/yenigrup`
+3. `.txt` veya `.md` dosyalari ekleyin
+4. `policies/rag.rego` dosyasina OPA politika kurali ekleyin:
    ```rego
    allow {
-     input.resource.collection == "newgroup"
-     input.user.groups[_] == "newgroup"
+     input.resource.collection == "yenigrup"
+     input.user.groups[_] == "yenigrup"
    }
    ```
-5. Restart OPA: `docker compose restart opa`
-6. Index: `curl -X POST http://localhost:8000/admin/reindex/newgroup`
-7. Assign users to group in Keycloak
+5. OPA'yi yeniden baslatin: `docker compose restart opa`
+6. Indexleyin: `curl -X POST http://localhost:8000/admin/reindex/yenigrup`
+7. Keycloak'ta kullanicilari gruba atayin
 
-## Configuration
+## Yapilandirma
 
-### Guardrails (`.env`)
+### Guvenlik Katmanlari (`.env`)
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `RATE_LIMIT_PER_MINUTE` | 15 | Max requests per user per minute |
-| `RATE_LIMIT_PER_HOUR` | 100 | Max requests per user per hour |
-| `MAX_INPUT_CHARS` | 4000 | Max input character length |
-| `MAX_OUTPUT_CHARS` | 8000 | Max output character length |
+| Degisken | Varsayilan | Aciklama |
+|----------|-----------|----------|
+| `RATE_LIMIT_PER_MINUTE` | 15 | Kullanici basi dakika siniri |
+| `RATE_LIMIT_PER_HOUR` | 100 | Kullanici basi saat siniri |
+| `MAX_INPUT_CHARS` | 4000 | Maksimum girdi karakter uzunlugu |
+| `MAX_OUTPUT_CHARS` | 8000 | Maksimum cikti karakter uzunlugu |
 
 ### LLM (`.env`)
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `OLLAMA_MODEL` | qwen2.5:7b-instruct | Ollama model name |
-| `OLLAMA_URL` | http://localhost:11434/api/chat | Ollama API endpoint |
+| Degisken | Varsayilan | Aciklama |
+|----------|-----------|----------|
+| `OLLAMA_MODEL` | qwen2.5:7b-instruct | Ollama model adi |
+| `OLLAMA_URL` | http://localhost:11434/api/chat | Ollama API adresi |
 
-## Tech Stack
+## Teknoloji Yigini
 
-| Component | Technology | Purpose |
-|-----------|-----------|---------|
-| Gateway | FastAPI (Python) | RAG pipeline, auth, guardrails |
-| LLM | Ollama | Text generation (local, private) |
-| Vector DB | Qdrant | Semantic search |
-| Embeddings | sentence-transformers | Multilingual (Turkish optimized) |
-| Identity | Keycloak | SSO, user/group management |
-| Policy | OPA (Rego) | Fine-grained access control |
-| UI | LibreChat | Chat interface with SSO |
-| Logging | Loki + Grafana + Promtail | Centralized monitoring |
+| Bilesen | Teknoloji | Amac |
+|---------|-----------|------|
+| Gateway | FastAPI (Python) | RAG pipeline, kimlik dogrulama, guvenlik katmanlari |
+| LLM | Ollama | Metin uretimi (yerel, ozel) |
+| Vektor DB | Qdrant | Anlamsal arama |
+| Gomme (Embedding) | sentence-transformers | Cok dilli (Turkce optimize) |
+| Kimlik | Keycloak | SSO, kullanici/grup yonetimi |
+| Politika | OPA (Rego) | Ince taneli erisim kontrolu |
+| Arayuz | LibreChat | Sohbet arayuzu (SSO entegreli) |
+| Izleme | Loki + Grafana + Promtail | Merkezi loglama |
 
-## License
+---
+
+<a name="english"></a>
+
+## English
+
+Banking-grade RAG gateway with Keycloak SSO, group-based RBAC, DLP, guardrails, and centralized logging. See the Turkish section above for full documentation. Key points:
+
+- **Auth:** Keycloak SSO with group-based access (no email/password)
+- **Guardrails:** DLP (TCKN/IBAN/card/phone/email), prompt injection, toxic filter, rate limit, hallucination detection
+- **Monitoring:** Loki + Grafana + Promtail with pre-built dashboards
+- **UI:** LibreChat with custom navy theme, JWT forwarding to gateway
+- **Policy:** OPA (Rego) per-collection access control
+- **LLM:** Ollama (local, private) with Turkish-optimized embeddings
+
+Quick start: `cp .env.example .env && cp librechat/.env.example librechat/.env` then `docker compose up -d`.
+
+## Lisans
 
 MIT
