@@ -1,12 +1,21 @@
 version: 1.2.1
 cache: true
 registration:
-  socialLogins: []
+  socialLogins: ["openid"]
+  allowedDomains:
+    - "bankai.local"
+
+interface:
+  endpointsMenu: true
+  modelSelect: true
+  sidePanel: true
 
 endpoints:
+  agents:
+    disabled: true
   custom:
     - name: "Bankai RAG"
-      apiKey: "sk-bankai"
+      apiKey: "sk-placeholder"
       baseURL: "http://host.docker.internal:8000/v1"
       models:
         default: ["qwen2.5:7b-instruct"]
@@ -14,6 +23,8 @@ endpoints:
       titleConvo: true
       titleModel: "qwen2.5:7b-instruct"
       summarize: false
+      headers:
+        Authorization: "Bearer {{LIBRECHAT_OPENID_ACCESS_TOKEN}}"
       dropParams:
         - "stop"
         - "frequency_penalty"

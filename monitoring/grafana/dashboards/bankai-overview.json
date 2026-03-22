@@ -1,0 +1,101 @@
+{
+  "editable": true,
+  "graphTooltip": 1,
+  "panels": [
+    {
+      "title": "Toplam Istek / Dakika",
+      "type": "timeseries",
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 0 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [{ "expr": "sum(count_over_time({job=\"bankai-audit\"} [1m]))", "legendFormat": "istek/dk", "refId": "A" }],
+      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "green" }, "custom": { "fillOpacity": 30 } } }
+    },
+    {
+      "title": "Engellenen Istekler / Dakika",
+      "type": "timeseries",
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 0 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [{ "expr": "sum(count_over_time({job=\"bankai-audit\", allowed=\"false\"} [1m]))", "legendFormat": "deny/dk", "refId": "A" }],
+      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "red" }, "custom": { "fillOpacity": 30 } } }
+    },
+    {
+      "title": "DLP Tespitleri / Dakika",
+      "type": "timeseries",
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 0 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [{ "expr": "sum(count_over_time({job=\"bankai-audit\"} |= \"TCKN\" [1m]))", "legendFormat": "dlp/dk", "refId": "A" }],
+      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "orange" }, "custom": { "fillOpacity": 30 } } }
+    },
+    {
+      "title": "Kullaniciya Gore Istekler",
+      "type": "barchart",
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 6 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [{ "expr": "sum by (user) (count_over_time({job=\"bankai-audit\"} [$__range]))", "legendFormat": "{{user}}", "refId": "A" }],
+      "options": { "orientation": "horizontal" }
+    },
+    {
+      "title": "Gruba Gore Istekler",
+      "type": "barchart",
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 6 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [{ "expr": "sum by (tenant) (count_over_time({job=\"bankai-audit\"} [$__range]))", "legendFormat": "{{tenant}}", "refId": "A" }],
+      "options": { "orientation": "horizontal" }
+    },
+    {
+      "title": "Son RAG Istekleri (Canli)",
+      "type": "logs",
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 13 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [{ "expr": "{job=\"bankai-audit\"}", "refId": "A" }],
+      "options": { "showTime": true, "showLabels": true, "wrapLogMessage": true, "prettifyLogMessage": true, "enableLogDetails": true, "sortOrder": "Descending" }
+    },
+    {
+      "title": "OPA Erisim Engelleri",
+      "type": "logs",
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 22 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [{ "expr": "{job=\"bankai-audit\", allowed=\"false\"}", "refId": "A" }],
+      "options": { "showTime": true, "showLabels": true, "wrapLogMessage": true, "prettifyLogMessage": true, "enableLogDetails": true, "sortOrder": "Descending" }
+    },
+    {
+      "title": "DLP Maskeleme Olaylari",
+      "type": "logs",
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 22 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [{ "expr": "{job=\"bankai-audit\"} |= \"TCKN\"", "refId": "A" }],
+      "options": { "showTime": true, "showLabels": true, "wrapLogMessage": true, "prettifyLogMessage": true, "enableLogDetails": true, "sortOrder": "Descending" }
+    },
+    {
+      "title": "Keycloak Olaylari (Login/Logout)",
+      "type": "logs",
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 29 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [{ "expr": "{container=~\".*keycloak.*\"} |~ \"(?i)login|logout|authenticate|LOGIN_ERROR\"", "refId": "A" }],
+      "options": { "showTime": true, "showLabels": true, "wrapLogMessage": true, "enableLogDetails": true, "sortOrder": "Descending" }
+    },
+    {
+      "title": "Gateway Uygulama Loglari",
+      "type": "logs",
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 29 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [{ "expr": "{job=\"bankai-gateway\"}", "refId": "A" }],
+      "options": { "showTime": true, "showLabels": true, "wrapLogMessage": true, "enableLogDetails": true, "sortOrder": "Descending" }
+    },
+    {
+      "title": "Tum Servis Hatalari",
+      "type": "logs",
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 36 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [{ "expr": "{container=~\".+\"} |~ \"(?i)error|exception|critical|fatal\"", "refId": "A" }],
+      "options": { "showTime": true, "showLabels": true, "wrapLogMessage": true, "enableLogDetails": true, "sortOrder": "Descending" }
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["bankai", "rag", "audit"],
+  "time": { "from": "now-1h", "to": "now" },
+  "title": "Bankai RAG Gateway",
+  "uid": "bankai-overview",
+  "version": 2,
+  "refresh": "10s"
+}

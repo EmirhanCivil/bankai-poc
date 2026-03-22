@@ -17,6 +17,8 @@ from dotenv import load_dotenv
 load_dotenv(_P(__file__).resolve().parent / ".env", override=True)
 
 import requests
+import jwt as pyjwt
+from jwt import PyJWKClient
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
@@ -57,37 +59,37 @@ EMBED_MODEL_NAME = os.getenv("EMBED_MODEL", "paraphrase-multilingual-MiniLM-L12-
 # Chunking
 CHUNK_MAX_CHARS = int(os.getenv("CHUNK_MAX_CHARS", "900"))
 
-# Basit user->role map (PoC)
-DEFAULT_USER_ROLE_MAP = {"ali": ["hr"], "ayse": ["compliance"], "veli": ["finance"]}
-try:
-    USER_ROLE_MAP = json.loads(os.getenv("USER_ROLE_MAP", "")) if os.getenv("USER_ROLE_MAP") else DEFAULT_USER_ROLE_MAP
-except Exception:
-    USER_ROLE_MAP = DEFAULT_USER_ROLE_MAP
+# Keycloak / JWT
+KEYCLOAK_JWKS_URL = os.getenv("KEYCLOAK_JWKS_URL", "http://localhost:8443/realms/bankai/protocol/openid-connect/certs")
+KEYCLOAK_ISSUER = os.getenv("KEYCLOAK_ISSUER", "http://localhost:8443/realms/bankai")
 
-# API key -> user map (PoC: OpenWebUI kullanıcı header'ı göndermediği için)
-DEFAULT_APIKEY_USER_MAP = {
-    "sk-dummy": "ali",       # OpenWebUI default key
-    "sk-hr": "ali",
-    "sk-compliance": "ayse",
-    "sk-finance": "veli",
-    "sk-bankai": "ali",      # LibreChat tek endpoint default (fallback — asıl çözüm userid map)
-}
-try:
-    APIKEY_USER_MAP = json.loads(os.getenv("APIKEY_USER_MAP", "")) if os.getenv("APIKEY_USER_MAP") else DEFAULT_APIKEY_USER_MAP
-except Exception:
-    APIKEY_USER_MAP = DEFAULT_APIKEY_USER_MAP
+# JWKS client (lazy init, caches keys)
+_jwks_client: Optional[PyJWKClient] = None
 
-# LibreChat MongoDB ObjectID -> bankai username map
-# LibreChat request body'de "user" alanına MongoDB _id gönderir
-DEFAULT_LIBRECHAT_USERID_MAP = {
-    "69a491c78b6939fccb7a25b5": "ali",
-    "69a4b5200f1399f96c7803ed": "ayse",
-    "69a4b5250f1399f96c7803f3": "veli",
-}
-try:
-    LIBRECHAT_USERID_MAP = json.loads(os.getenv("LIBRECHAT_USERID_MAP", "")) if os.getenv("LIBRECHAT_USERID_MAP") else DEFAULT_LIBRECHAT_USERID_MAP
-except Exception:
-    LIBRECHAT_USERID_MAP = DEFAULT_LIBRECHAT_USERID_MAP
+def _get_jwks_client() -> PyJWKClient:
+    global _jwks_client
+    if _jwks_client is None:
+        _jwks_client = PyJWKClient(KEYCLOAK_JWKS_URL, cache_keys=True)
+    return _jwks_client
+
+def _validate_jwt(token: str) -> Optional[Dict[str, Any]]:
+    """Validate a Keycloak JWT and return decoded claims, or None on failure."""
+    try:
+        client = _get_jwks_client()
+        signing_key = client.get_signing_key_from_jwt(token)
+        claims = pyjwt.decode(
+            token,
+            signing_key.key,
+            algorithms=["RS256"],
+            issuer=KEYCLOAK_ISSUER,
+            options={"verify_aud": False},
+        )
+        return claims
+    except Exception as e:
+        log.debug("JWT validation failed: %s", repr(e))
+        return None
+
+# Roller artik sadece Keycloak JWT'den geliyor, statik mapping yok
 
 
 # ------------------------------------------------------------
@@ -147,22 +149,160 @@ def audit(event: Dict[str, Any]) -> None:
 
 
 # ------------------------------------------------------------
-# Util: DLP (PoC)
+# Guardrail: DLP (Data Loss Prevention)
 # ------------------------------------------------------------
 
-TCKN_RE = re.compile(r"\b\d{11}\b")
+DLP_PATTERNS = [
+    ("TCKN",        re.compile(r"\b\d{11}\b"),                          "***TCKN***"),
+    ("IBAN",        re.compile(r"\bTR\d{24}\b", re.IGNORECASE),        "***IBAN***"),
+    ("KREDI_KARTI", re.compile(r"\b(?:\d[ -]*?){13,16}\b"),            "***KART***"),
+    ("TELEFON",     re.compile(r"\b(?:\+90|0)[\s-]?\d{3}[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}\b"), "***TEL***"),
+    ("EMAIL",       re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"), "***EMAIL***"),
+]
+
+def _luhn_check(num: str) -> bool:
+    digits = [int(d) for d in num if d.isdigit()]
+    if len(digits) < 13 or len(digits) > 19:
+        return False
+    checksum = 0
+    for i, d in enumerate(reversed(digits)):
+        if i % 2 == 1:
+            d *= 2
+            if d > 9:
+                d -= 9
+        checksum += d
+    return checksum % 10 == 0
 
 def dlp_mask(text: str) -> Dict[str, Any]:
-    hits = []
-    def repl(m: re.Match) -> str:
-        hits.append({"type": "TCKN", "match": m.group(0)})
-        return "***********"
-    masked = TCKN_RE.sub(repl, text or "")
+    hits: List[Dict[str, str]] = []
+    masked = text or ""
+    for ptype, pattern, replacement in DLP_PATTERNS:
+        def _repl(m: re.Match, _type=ptype, _repl=replacement) -> str:
+            val = m.group(0)
+            if _type == "KREDI_KARTI":
+                clean = re.sub(r"[\s-]", "", val)
+                if not _luhn_check(clean):
+                    return val
+            hits.append({"type": _type, "match": val[:4] + "..."})
+            return _repl
+        masked = pattern.sub(_repl, masked)
     return {"masked": masked, "hits": hits}
 
 
 # ------------------------------------------------------------
-# Util: roles parsing
+# Guardrail: Prompt Injection Detection
+# ------------------------------------------------------------
+
+PROMPT_INJECTION_PATTERNS = [
+    re.compile(r"(?:ignore|disregard|forget)\s+(?:all\s+)?(?:previous|above|prior)\s+(?:instructions|prompts|rules)", re.IGNORECASE),
+    re.compile(r"(?:show|reveal|print|display|output|give)\s+(?:me\s+)?(?:your\s+)?(?:system\s+)?(?:prompt|instructions|rules)", re.IGNORECASE),
+    re.compile(r"you\s+are\s+now\s+(?:a|an|in)\s+", re.IGNORECASE),
+    re.compile(r"(?:act|behave|pretend|roleplay)\s+(?:as|like)\s+", re.IGNORECASE),
+    re.compile(r"(?:new|override|replace|change)\s+(?:system\s+)?(?:prompt|instructions|role|persona)", re.IGNORECASE),
+    re.compile(r"(?:do\s+not|don'?t)\s+(?:follow|obey|listen)", re.IGNORECASE),
+    re.compile(r"\]\s*\}\s*(?:system|assistant)\s*:", re.IGNORECASE),
+    # Türkçe
+    re.compile(r"(?:önceki|yukarıdaki|mevcut)\s+(?:talimatları|kuralları|promptu)\s+(?:unut|yoksay|görmezden\s+gel)", re.IGNORECASE),
+    re.compile(r"(?:sistem\s+)?(?:promptunu|talimatlarını|kurallarını)\s+(?:göster|yaz|ver)", re.IGNORECASE),
+    re.compile(r"(?:artık|şimdi|bundan\s+sonra)\s+(?:sen\s+)?(?:bir|başka)\s+", re.IGNORECASE),
+    re.compile(r"(?:gibi|olarak)\s+(?:davran|rol\s+yap|hareket\s+et)", re.IGNORECASE),
+]
+
+def detect_prompt_injection(text: str) -> Optional[str]:
+    for pattern in PROMPT_INJECTION_PATTERNS:
+        m = pattern.search(text)
+        if m:
+            return m.group(0)
+    return None
+
+
+# ------------------------------------------------------------
+# Guardrail: Toxic Content Filter
+# ------------------------------------------------------------
+
+TOXIC_KEYWORDS_TR = {
+    "amk", "aq", "orospu", "piç", "siktir", "sikeyim", "siktiğimin",
+    "gerizekalı", "aptal", "salak", "mal", "dangalak", "göt", "yavşak",
+    "kahpe", "pezevenk", "hıyar", "kodumun", "hassiktir", "amına",
+}
+
+TOXIC_KEYWORDS_EN = {
+    "fuck", "shit", "bitch", "asshole", "bastard", "dick", "pussy",
+    "nigger", "faggot", "retard", "cunt", "whore", "slut", "motherfucker",
+}
+
+TOXIC_ALL = TOXIC_KEYWORDS_TR | TOXIC_KEYWORDS_EN
+
+def detect_toxic_content(text: str) -> Optional[str]:
+    words = set(re.findall(r"\b\w+\b", text.lower()))
+    found = words & TOXIC_ALL
+    if found:
+        return ", ".join(sorted(found))
+    return None
+
+
+# ------------------------------------------------------------
+# Guardrail: Rate Limiting (in-memory sliding window)
+# ------------------------------------------------------------
+
+from collections import defaultdict
+import threading
+
+RATE_LIMIT_PER_MINUTE = int(os.getenv("RATE_LIMIT_PER_MINUTE", "15"))
+RATE_LIMIT_PER_HOUR = int(os.getenv("RATE_LIMIT_PER_HOUR", "100"))
+
+_rate_lock = threading.Lock()
+_rate_store: Dict[str, List[float]] = defaultdict(list)
+
+def _cleanup_timestamps(timestamps: List[float], window: float) -> List[float]:
+    cutoff = time.time() - window
+    return [t for t in timestamps if t > cutoff]
+
+def check_rate_limit(user_id: str) -> Optional[str]:
+    now = time.time()
+    with _rate_lock:
+        ts = _rate_store[user_id]
+        ts = _cleanup_timestamps(ts, 3600)
+        _rate_store[user_id] = ts
+
+        recent_minute = [t for t in ts if t > now - 60]
+        if len(recent_minute) >= RATE_LIMIT_PER_MINUTE:
+            return f"Dakika limiti asildi ({RATE_LIMIT_PER_MINUTE}/dk)"
+
+        if len(ts) >= RATE_LIMIT_PER_HOUR:
+            return f"Saat limiti asildi ({RATE_LIMIT_PER_HOUR}/saat)"
+
+        ts.append(now)
+    return None
+
+
+# ------------------------------------------------------------
+# Guardrail: Input/Output Size Limits
+# ------------------------------------------------------------
+
+MAX_INPUT_CHARS = int(os.getenv("MAX_INPUT_CHARS", "4000"))
+MAX_OUTPUT_CHARS = int(os.getenv("MAX_OUTPUT_CHARS", "8000"))
+
+
+# ------------------------------------------------------------
+# Guardrail: Hallucination Detection
+# ------------------------------------------------------------
+
+def detect_hallucination(answer: str, sources: List[Dict[str, Any]], ctx: List[Dict[str, Any]]) -> bool:
+    if not ctx:
+        return True
+    source_text = " ".join(c.get("text", "") for c in ctx).lower()
+    answer_words = set(re.findall(r"\b[a-züöşıçğ]{4,}\b", answer.lower()))
+    if len(answer_words) < 3:
+        return False
+    source_words = set(re.findall(r"\b[a-züöşıçğ]{4,}\b", source_text))
+    overlap = answer_words & source_words
+    ratio = len(overlap) / len(answer_words) if answer_words else 0
+    return ratio < 0.15
+
+
+# ------------------------------------------------------------
+# Util: groups parsing
 # ------------------------------------------------------------
 
 def parse_roles(x_roles: str) -> List[str]:
@@ -172,17 +312,15 @@ def parse_roles(x_roles: str) -> List[str]:
 
 
 def infer_roles_for_user(username: str) -> List[str]:
-    roles = USER_ROLE_MAP.get(username, [])
-    if isinstance(roles, str):
-        roles = [roles]
-    return [r for r in roles if r]
+    """Artik roller sadece JWT'den geliyor. Fallback yok."""
+    return []
 
 
-def infer_tenant(explicit_tenant: Optional[str], roles: List[str]) -> str:
+def infer_tenant(explicit_tenant: Optional[str], groups: List[str]) -> str:
     if explicit_tenant and explicit_tenant.strip():
         return explicit_tenant.strip()
-    if len(roles) == 1:
-        return roles[0]
+    if len(groups) == 1:
+        return groups[0]
     return "default"
 
 
@@ -397,22 +535,56 @@ def ollama_chat(system: str, user_msg: str, model: Optional[str] = None) -> str:
 
 def answer_from_docs(tenant: str, question: str, user: Dict[str, Any]) -> Dict[str, Any]:
     t0 = time.time()
+    username = user.get("username", "?")
+    guardrail_flags: List[str] = []
 
     log.info("=== PIPELINE START === tenant=%s user=%s question='%s'",
-             tenant, user.get("username"), question[:200])
+             username, username, question[:200])
 
+    # ── Guardrail: Rate Limiting ──
+    rate_err = check_rate_limit(username)
+    if rate_err:
+        log.warning("RATE LIMIT: user=%s reason=%s", username, rate_err)
+        audit({"ts": time.time(), "user": user, "tenant": tenant, "blocked": "rate_limit", "reason": rate_err})
+        raise HTTPException(status_code=429, detail=rate_err)
+
+    # ── Guardrail: Input Size Limit ──
+    if len(question) > MAX_INPUT_CHARS:
+        log.warning("INPUT TOO LONG: user=%s len=%d max=%d", username, len(question), MAX_INPUT_CHARS)
+        audit({"ts": time.time(), "user": user, "tenant": tenant, "blocked": "input_too_long", "input_len": len(question)})
+        raise HTTPException(status_code=400, detail=f"Girdi çok uzun (maks {MAX_INPUT_CHARS} karakter)")
+
+    # ── Guardrail: Toxic Content (input) ──
+    toxic = detect_toxic_content(question)
+    if toxic:
+        log.warning("TOXIC INPUT: user=%s words=%s", username, toxic)
+        audit({"ts": time.time(), "user": user, "tenant": tenant, "blocked": "toxic_input", "toxic_words": toxic})
+        raise HTTPException(status_code=400, detail="Uygunsuz içerik tespit edildi. Lütfen profesyonel bir dil kullanın.")
+
+    # ── Guardrail: Prompt Injection (input) ──
+    injection = detect_prompt_injection(question)
+    if injection:
+        log.warning("PROMPT INJECTION: user=%s match='%s'", username, injection)
+        audit({"ts": time.time(), "user": user, "tenant": tenant, "blocked": "prompt_injection", "match": injection})
+        raise HTTPException(status_code=400, detail="Güvenlik ihlali tespit edildi. Bu istek reddedildi.")
+
+    # ── DLP: Input maskeleme ──
     dlp_in = dlp_mask(question)
+    if dlp_in["hits"]:
+        guardrail_flags.append("dlp_input")
 
+    # ── OPA: Yetkilendirme ──
     if not opa_allow(user, {"collection": tenant}):
         log.warning("OPA DENIED: user=%s tenant=%s", user, tenant)
         audit({"ts": time.time(), "user": user, "tenant": tenant, "allowed": False, "dlp_in": dlp_in["hits"]})
         raise HTTPException(status_code=403, detail="Policy deny")
 
+    # ── Retrieval ──
     ctx = retrieve(tenant, dlp_in["masked"], k=4)
     if not ctx:
         log.warning("NO RETRIEVAL RESULTS: tenant=%s query='%s'", tenant, dlp_in["masked"][:200])
         audit({"ts": time.time(), "user": user, "tenant": tenant, "allowed": True, "sources": [], "dlp_in": dlp_in["hits"], "dlp_out": [], "latency_ms": int((time.time()-t0)*1000), "model": OLLAMA_MODEL})
-        return {"answer": "İlgili kaynak bulamadım.", "sources": []}
+        return {"answer": "Bu bilgi mevcut kaynaklarda bulunmamaktadır.", "sources": []}
 
     sources = [{"doc_id": c["doc_id"], "score": c["score"]} for c in ctx]
     context_text = "\n\n".join([f"[{i+1}] ({c['doc_id']}) {c['text']}" for i, c in enumerate(ctx)])
@@ -420,6 +592,7 @@ def answer_from_docs(tenant: str, question: str, user: Dict[str, Any]) -> Dict[s
     log.info("RETRIEVED %d chunks: %s", len(ctx),
              [(c["doc_id"], round(c["score"], 3)) for c in ctx])
 
+    # ── LLM Call ──
     system = GROUNDING_SYSTEM_PROMPT
     user_msg = f"Soru: {dlp_in['masked']}\n\nKaynaklar:\n{context_text}\n\nCevap:"
 
@@ -433,10 +606,32 @@ def answer_from_docs(tenant: str, question: str, user: Dict[str, Any]) -> Dict[s
         audit({"ts": time.time(), "user": user, "tenant": tenant, "allowed": True, "sources": sources, "dlp_in": dlp_in["hits"], "dlp_out": [], "latency_ms": int((time.time()-t0)*1000), "model": OLLAMA_MODEL, "error": f"ollama_error: {repr(e)}"})
         raise HTTPException(status_code=502, detail="LLM backend error")
 
-    dlp_out = dlp_mask(raw)
+    # ── Guardrail: Output Size Limit ──
+    if len(raw) > MAX_OUTPUT_CHARS:
+        raw = raw[:MAX_OUTPUT_CHARS] + "\n\n[Cevap uzunluk sınırı nedeniyle kesildi]"
+        guardrail_flags.append("output_truncated")
 
-    log.info("=== PIPELINE DONE === latency=%dms answer_len=%d sources=%s",
-             int((time.time()-t0)*1000), len(raw), [s["doc_id"] for s in sources])
+    # ── Guardrail: Toxic Content (output) ──
+    toxic_out = detect_toxic_content(raw)
+    if toxic_out:
+        log.warning("TOXIC OUTPUT: user=%s words=%s", username, toxic_out)
+        guardrail_flags.append("toxic_output")
+        raw = "Üretilen cevapta uygunsuz içerik tespit edildi. Lütfen sorunuzu yeniden formüle edin."
+
+    # ── Guardrail: Hallucination Detection ──
+    is_hallucination = detect_hallucination(raw, sources, ctx)
+    if is_hallucination:
+        log.warning("HALLUCINATION DETECTED: user=%s tenant=%s", username, tenant)
+        guardrail_flags.append("hallucination_warning")
+        raw += "\n\n⚠ Bu cevap kaynaklarla tam olarak doğrulanamamıştır. Lütfen ilgili birime danışın."
+
+    # ── DLP: Output maskeleme ──
+    dlp_out = dlp_mask(raw)
+    if dlp_out["hits"]:
+        guardrail_flags.append("dlp_output")
+
+    log.info("=== PIPELINE DONE === latency=%dms answer_len=%d sources=%s guardrails=%s",
+             int((time.time()-t0)*1000), len(raw), [s["doc_id"] for s in sources], guardrail_flags)
 
     audit({
         "ts": time.time(),
@@ -446,6 +641,7 @@ def answer_from_docs(tenant: str, question: str, user: Dict[str, Any]) -> Dict[s
         "sources": sources,
         "dlp_in": dlp_in["hits"],
         "dlp_out": dlp_out["hits"],
+        "guardrail_flags": guardrail_flags,
         "latency_ms": int((time.time()-t0)*1000),
         "model": OLLAMA_MODEL,
     })
@@ -470,6 +666,8 @@ def debug_config():
         "OLLAMA_MODEL": OLLAMA_MODEL,
         "QDRANT_URL": QDRANT_URL,
         "OPA_URL": OPA_URL,
+        "KEYCLOAK_ISSUER": KEYCLOAK_ISSUER,
+        "KEYCLOAK_JWKS_URL": KEYCLOAK_JWKS_URL,
     }
 
 
@@ -480,13 +678,13 @@ def reindex(tenant: str):
 
 
 @app.post("/ask")
-def ask(req: AskReq, x_user: str = Header(default="anonymous"), x_roles: str = Header(default="")):
-    roles = parse_roles(x_roles)
-    user = {"username": x_user, "roles": roles}
+def ask(req: AskReq, x_user: str = Header(default="anonymous"), x_groups: str = Header(default="")):
+    groups = [g.strip().lower() for g in x_groups.split(",") if g.strip()]
+    user = {"username": x_user, "groups": groups}
 
     tenant = (req.tenant or "").strip()
     if not tenant:
-        tenant = infer_tenant(None, roles)
+        tenant = infer_tenant(None, groups)
 
     return answer_from_docs(tenant, req.question, user)
 
@@ -523,19 +721,20 @@ def _last_user_message(messages: List[ChatMessage]) -> str:
     return user_msgs[-1].content.strip()
 
 
-def _resolve_user_from_apikey(auth_header: str) -> Optional[str]:
-    """API key'den kullanıcı çözümle (PoC)."""
+def _resolve_user_from_jwt(auth_header: str) -> Optional[Tuple[str, List[str]]]:
+    """Extract user_id and roles from a Keycloak JWT Bearer token."""
     if not auth_header:
         return None
-    key = auth_header.removeprefix("Bearer ").strip()
-    return APIKEY_USER_MAP.get(key)
-
-
-def _resolve_user_from_librechat_id(body_user: str) -> Optional[str]:
-    """LibreChat MongoDB ObjectID'den bankai kullanıcı adını çözümle."""
-    if not body_user:
+    token = auth_header.removeprefix("Bearer ").strip()
+    if not token or token.count(".") != 2:
         return None
-    return LIBRECHAT_USERID_MAP.get(body_user)
+    claims = _validate_jwt(token)
+    if not claims:
+        return None
+    user_id = claims.get("preferred_username", "")
+    groups = [g.lower() for g in claims.get("groups", [])]
+    log.info("JWT resolved: user=%s groups=%s", user_id, groups)
+    return (user_id, groups) if user_id else None
 
 
 def _resolve_user_context(
@@ -547,34 +746,19 @@ def _resolve_user_context(
     x_openwebui_user_email: str,
     auth_header: str = "",
 ) -> Tuple[str, List[str], str]:
-    """Resolve user_id, roles, tenant from all available sources."""
-    user_id = (x_user or "").strip()
-    if not user_id:
-        body_user = (req.user or "").strip()
-        # 1) Direkt bilinen kullanıcı adı mı?
-        known_body_user = body_user if body_user in USER_ROLE_MAP else ""
-        # 2) LibreChat MongoDB ObjectID mi?
-        librechat_user = _resolve_user_from_librechat_id(body_user) if not known_body_user else None
-        user_id = (
-            (x_openwebui_user_name or "").strip()
-            or (x_openwebui_user_email or "").strip()
-            or known_body_user
-            or librechat_user
-            or _resolve_user_from_apikey(auth_header)
-            or "anonymous"
-        )
+    """Resolve user_id, groups, tenant from Keycloak JWT. No fallback."""
+    jwt_result = _resolve_user_from_jwt(auth_header)
+    if jwt_result:
+        user_id, groups = jwt_result
+        tenant = infer_tenant(x_tenant, groups)
+        return user_id, groups, tenant
 
-    roles = parse_roles(x_roles)
-    if not roles:
-        roles = infer_roles_for_user(user_id)
-
-    tenant = infer_tenant(x_tenant, roles)
-    return user_id, roles, tenant
+    raise HTTPException(status_code=401, detail="Valid Keycloak JWT required")
 
 
 def _build_non_streaming_response(
     model: str, assistant_text: str, request_id: str,
-    tenant: str, user_id: str, roles: List[str],
+    tenant: str, user_id: str, groups: List[str],
     sources: List[Dict[str, Any]],
 ) -> dict:
     """Build an OpenAI-compatible non-streaming chat completion response."""
@@ -595,7 +779,7 @@ def _build_non_streaming_response(
             "request_id": request_id,
             "tenant": tenant,
             "user": user_id,
-            "roles": roles,
+            "groups": groups,
             "sources": sources,
         },
     }
@@ -700,17 +884,17 @@ def chat_completions(
 
     # ── Resolve user context (API key fallback dahil) ──
     auth_header = request.headers.get("authorization", "")
-    user_id, roles, tenant = _resolve_user_context(
+    user_id, groups, tenant = _resolve_user_context(
         req, x_user, x_roles, x_tenant,
         x_openwebui_user_name, x_openwebui_user_email,
         auth_header=auth_header,
     )
 
-    log.info("RESOLVED: user_id=%s roles=%s tenant=%s", user_id, roles, tenant)
+    log.info("RESOLVED: user_id=%s groups=%s tenant=%s", user_id, groups, tenant)
 
     question = _last_user_message(req.messages)
     model = req.model or OLLAMA_MODEL
-    user = {"username": user_id, "roles": roles}
+    user = {"username": user_id, "groups": groups}
 
     # ── Core RAG pipeline — same for stream and non-stream ──
     out = answer_from_docs(tenant, question, user)
@@ -737,5 +921,5 @@ def chat_completions(
     # ── NON-STREAMING RESPONSE ──
     return _build_non_streaming_response(
         model, assistant_text, request_id,
-        tenant, user_id, roles, sources,
+        tenant, user_id, groups, sources,
     )

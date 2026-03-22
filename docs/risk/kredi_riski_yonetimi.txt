@@ -1,0 +1,36 @@
+Bankai A.Ş. Kredi Riski Yönetimi Politikası
+
+1. Kredi Değerlendirme Kriterleri
+Bireysel kredilerde minimum kredi notu 650 olmalıdır.
+Kurumsal kredilerde son 3 yıllık mali tablolar değerlendirilir.
+Borç/özkaynak oranı %60'ı aşan firmalara kredi kullandırılmaz.
+Kredi talebi değerlendirme süresi bireysel için 3 iş günü, kurumsal için 10 iş günüdür.
+Tek müşteriye kullandırılabilecek maksimum kredi tutarı özkaynaklarının %10'udur.
+
+2. Teminat Politikası
+Konut kredilerinde LTV (Loan to Value) oranı maksimum %80'dir.
+Taşıt kredilerinde LTV oranı maksimum %70'dir.
+Ticari kredilerde gayrimenkul teminatı ekspertiz değerinin %60'ı üzerinden kabul edilir.
+Teminat değerlemesi bağımsız ekspertiz firmaları tarafından yapılır.
+Teminat değerlemeleri yılda bir güncellenir.
+
+3. Portföy Limitleri
+Sektörel yoğunlaşma limiti: Tek sektöre toplam kredilerin maksimum %15'i
+Coğrafi yoğunlaşma limiti: Tek ile toplam kredilerin maksimum %20'si
+Döviz cinsi kredi oranı toplam portföyün %30'unu aşamaz.
+Takipteki krediler (NPL) oranı hedefi: <%3
+Karşılık ayırma oranı minimum %70 olmalıdır.
+
+4. Erken Uyarı Sistemi
+Kredi notu 2 kademe düşen müşteriler otomatik izlemeye alınır.
+30 gün gecikme yapan müşteriler "yakın izleme" listesine eklenir.
+60 gün gecikme yapan müşteriler "tahsilat" sürecine aktarılır.
+90 gün gecikme yapan krediler "takip" hesaplarına aktarılır.
+Sektörel risk raporları haftalık olarak güncellenir.
+
+5. Stres Testi
+Kredi portföyüne üç aylık periyotlarla stres testi uygulanır.
+Baz senaryo: GDP büyümesi %3, faiz %25, işsizlik %10
+Olumsuz senaryo: GDP daralma %2, faiz %40, işsizlik %15
+Şiddetli senaryo: GDP daralma %5, faiz %50, işsizlik %20
+Stres testi sonuçları Yönetim Kurulu'na ve BDDK'ya raporlanır.

@@ -12,6 +12,9 @@ services:
       - .env
     volumes:
       - ./librechat.yaml:/app/librechat.yaml:ro
+      - ./openidStrategy.js:/app/api/strategies/openidStrategy.js:ro
+      - ./index.html:/app/client/dist/index.html:ro
+      - ./custom.css:/app/client/dist/custom.css:ro
       - librechat_images:/app/client/public/images
     restart: unless-stopped
 

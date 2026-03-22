@@ -1,0 +1,85 @@
+/* Bankai Lacivert Tema */
+.dark {
+  /* Ana arka planlar - lacivert tonları */
+  --background: 222 47% 7%;
+  --foreground: 210 40% 96%;
+
+  --gray-900: #0a1628;
+  --gray-850: #0d1b30;
+  --gray-800: #111f3a;
+  --gray-700: #162544;
+  --gray-600: #1d2f52;
+  --gray-500: #263a61;
+  --gray-400: #3a5080;
+  --gray-300: #5a7299;
+  --gray-200: #8899b3;
+
+  /* Surface'lar */
+  --surface-primary: var(--gray-900);
+  --surface-primary-alt: var(--gray-850);
+  --surface-primary-contrast: var(--gray-850);
+  --surface-secondary: var(--gray-800);
+  --surface-secondary-alt: var(--gray-800);
+  --surface-tertiary: var(--gray-700);
+  --surface-tertiary-alt: var(--gray-700);
+  --surface-dialog: var(--gray-850);
+  --surface-chat: var(--gray-700);
+  --surface-hover: var(--gray-600);
+  --surface-hover-alt: var(--gray-600);
+  --surface-active: var(--gray-500);
+  --surface-active-alt: var(--gray-700);
+  --bg-surface-hover: var(--gray-700);
+
+  /* Header */
+  --header-primary: var(--gray-700);
+  --header-hover: var(--gray-600);
+  --header-button-hover: var(--gray-700);
+
+  /* Border'lar */
+  --border: 222 30% 18%;
+  --border-light: var(--gray-700);
+  --border-medium: var(--gray-600);
+  --border-medium-alt: var(--gray-600);
+  --border-heavy: var(--gray-500);
+  --border-xheavy: var(--gray-400);
+  --input: 222 30% 18%;
+
+  /* Accent - altın/gold tonu (bankacılık hissi) */
+  --accent: 45 80% 55%;
+  --accent-foreground: 222 47% 7%;
+
+  /* Submit button - mavi tonu */
+  --surface-submit: #1a56db;
+  --surface-submit-hover: #1648b8;
+}
+
+/* Light mode da lacivert bazlı */
+.light {
+  --background: 220 30% 97%;
+  --foreground: 222 47% 11%;
+  --gray-50: #f0f3f8;
+  --gray-100: #e1e7f0;
+  --gray-200: #c5cfe0;
+  --gray-300: #a0b0c8;
+
+  --surface-primary: #f5f7fa;
+  --surface-primary-alt: #edf0f5;
+  --surface-secondary: #e5e9f0;
+  --surface-tertiary: #dce1eb;
+  --surface-chat: #edf0f5;
+  --surface-hover: #dce1eb;
+
+  --header-primary: #162544;
+  --header-hover: #1d2f52;
+  --header-button-hover: #263a61;
+
+  --accent: 222 60% 45%;
+  --surface-submit: #1a56db;
+  --surface-submit-hover: #1648b8;
+}
+
+/* Login sayfası özel stil */
+[data-testid="login-form"],
+.login-container {
+  background: linear-gradient(135deg, #0a1628 0%, #162544 50%, #1d2f52 100%) !important;
+}

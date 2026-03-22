@@ -13,24 +13,27 @@ OpenWebUI, acik kaynakli, modern bir chat arayuzudur. OpenAI-uyumlu API'lerle ca
 
 ## Baglanti Topolojisi (Mevcut Yapilandirma)
 
-OpenWebUI, **Nginx uzerinden** Gateway'e baglanir. Bu, RBAC'in calismasini saglayan yapidir.
+OpenWebUI, **dogrudan Gateway'e** baglanir. Nginx'i **atlar**.
 
 ```
-+-------------+       HTTP/REST        +---------+       HTTP/REST        +----------------+
-|  OpenWebUI  | ---------------------> |  Nginx  | ---------------------> | Bankai Gateway |
-|  (:3000)    |   host.docker.internal | (:8080) |   host.docker.internal |    (:8000)     |
-|             |        :8080/v1        |         |        :8000           |                |
-+-------------+                        +---------+                        +----------------+
++-------------+       HTTP/REST        +----------------+
+|  OpenWebUI  | ---------------------> | Bankai Gateway |
+|  (:3000)    |   host.docker.internal |    (:8000)     |
+|             |        :8000/v1        |                |
++-------------+                        +----------------+
                                            |
-                                      Header Injection:
-                                      X-OpenWebUI-User-Name: ali
-                                           ↓
-                                      X-User: ali
-                                      X-Roles: hr
-                                      X-Tenant: hr
+                                      Kullanici Cozumleme:
+                                      Authorization: Bearer sk-dummy
+                                           ↓ APIKEY_USER_MAP
+                                      user: ali
+                                      roles: ["hr"]
+                                      tenant: hr
 ```
 
-**Neden Nginx zorunlu?** OpenWebUI, backend'e sadece `X-OpenWebUI-User-Name` header'i gonderir. Gateway ise `X-User`, `X-Roles`, `X-Tenant` bekler. Nginx bu donusumu yapar ve kullaniciya gore rol/tenant atamasini gerceklestirir.
+**Neden Nginx kullanilmiyor?** OpenWebUI, OpenAI-uyumlu API'lere `X-OpenWebUI-User-Name` header'i **gondermez**. Bu nedenle Nginx'teki map kurallari tetiklenmez. Bunun yerine Gateway, `Authorization` header'indaki API key'i `APIKEY_USER_MAP` tablosunda arayarak kullaniciyi cozer.
+
+> **Not:** Nginx (:8080) opsiyonel olarak mevcuttur. UI'lar tarafindan kullanilmaz,
+> yalnizca harici istemciler (curl, Postman vb.) icin header injection ile RBAC saglar.
 
 ## RBAC Nasil Calisiyor?
 
@@ -38,70 +41,43 @@ OpenWebUI, **Nginx uzerinden** Gateway'e baglanir. Bu, RBAC'in calismasini sagla
 
 1. **ali** OpenWebUI'da login olur (dahili auth, SQLite'da kayitli)
 2. ali soru sorar
-3. OpenWebUI istegi Nginx'e gonderir: `X-OpenWebUI-User-Name: ali`
-4. Nginx `nginx.conf`'taki map kurallariyla:
-   - `ali` → `poc_roles: "hr"` → `poc_tenant: "hr"`
-5. Nginx gateway'e ilettigi istege su header'lari ekler:
-   - `X-User: ali`
-   - `X-Roles: hr`
-   - `X-Tenant: hr`
-6. Gateway `X-User` header'ini gorur → **ilk oncelikli kaynak** → `ali` olarak cozumler
-7. OPA kontrolu: ali(hr) + hr koleksiyonu → **IZIN VERILDI**
-8. Qdrant'ta `hr` koleksiyonunda arama yapilir
+3. OpenWebUI istegi dogrudan Gateway'e gonderir: `Authorization: Bearer sk-dummy`
+4. Gateway `APIKEY_USER_MAP`'te `sk-dummy` → `ali` olarak cozer
+5. Gateway `USER_ROLE_MAP`'te `ali` → `["hr"]` → tenant: `hr`
+6. OPA kontrolu: ali(hr) + hr koleksiyonu → **IZIN VERILDI**
+7. Qdrant'ta `hr` koleksiyonunda arama yapilir
 
 ### ayse login olursa:
-- Nginx: `ayse` → `compliance` → `compliance`
-- Gateway: ayse(compliance) → compliance koleksiyonu
+- OpenWebUI'da API key `sk-compliance` olarak ayarlanir
+- Gateway: sk-compliance → ayse → compliance → compliance koleksiyonu
 
 ### veli login olursa:
-- Nginx: `veli` → `finance` → `finance`
-- Gateway: veli(finance) → finance koleksiyonu
+- OpenWebUI'da API key `sk-finance` olarak ayarlanir
+- Gateway: sk-finance → veli → finance → finance koleksiyonu
 
-**Her kullanici sadece kendi ekibinin dokumanlarini gorebilir.**
+**Her API key bir kullaniciya baglidir, her kullanici sadece kendi ekibinin dokumanlarini gorebilir.**
 
-## Nginx Map Kurallari
+## Nginx (Opsiyonel)
 
-`nginx/nginx.conf` dosyasindaki kullanici-rol eslemesi:
+Nginx (:8080) OpenWebUI tarafindan kullanilmaz. Yalnizca harici istemciler (curl, Postman vb.) icin `X-OpenWebUI-User-Name` header'ini `X-User/X-Roles/X-Tenant` header'larina donusturup RBAC saglayan opsiyonel bir reverse proxy katmanidir.
 
-```nginx
-# user -> roles (PoC)
-map $poc_user2 $poc_roles {
-    default "";
-    "ali"  "hr";
-    "ayse" "compliance";
-    "veli" "finance";
-}
-
-# roles -> tenant
-map $poc_roles $poc_tenant {
-    default "";
-    "hr"         "hr";
-    "compliance" "compliance";
-    "finance"    "finance";
-}
-```
-
-Bilinmeyen kullanici (map'te olmayan) icin roller bos doner ve Nginx `403 Forbidden` dondurur:
-
-```nginx
-if ($poc_roles = "") { return 403; }
-```
+Detaylar icin: `nginx/nginx.conf`
 
 ## Docker Yapilandirmasi
 
 ```bash
 docker run -d --name openwebui \
   -p 3000:8080 \
-  -e OPENAI_API_BASE_URL=http://host.docker.internal:8080/v1 \
-  -e OPENAI_API_KEY=dummy \
+  -e OPENAI_API_BASE_URL=http://host.docker.internal:8000/v1 \
+  -e OPENAI_API_KEY=sk-dummy \
   --add-host host.docker.internal:host-gateway \
   ghcr.io/open-webui/open-webui:main
 ```
 
 **Parametreler:**
 - `-p 3000:8080` — Host'un 3000 portunu container'in 8080 portuna baglar
-- `OPENAI_API_BASE_URL` — **Nginx'in adresi** (`:8080`), dogrudan gateway degil
-- `OPENAI_API_KEY` — Nginx'e gecmek icin gerekli (gateway'e kadar ulasmaz, Nginx kendi header'larini koyar)
+- `OPENAI_API_BASE_URL` — **Dogrudan Gateway adresi** (`:8000`)
+- `OPENAI_API_KEY` — Gateway'in `APIKEY_USER_MAP`'inde kullanici cozumlemek icin kullanilir (`sk-dummy` → `ali`)
 - `--add-host` — `host.docker.internal` cozumlemesi
 
 ## Model Erisim Kontrolu
@@ -116,7 +92,6 @@ Bu sayede farkli kullanicilar farkli model/endpoint'lere yonlendirilebilir.
 
 ## Bilinen Kisitlamalar
 
-- Nginx'teki kullanici-rol map'i statik — yeni kullanici eklendiginde `nginx.conf` guncellenmeli
-- OpenWebUI'daki kullanici adi ile Nginx map'teki isim **birebir esmeli** (buyuk/kucuk harf dahil)
+- `APIKEY_USER_MAP` statik — yeni kullanici icin yeni API key eklenmeli (`app_main.py` veya `APIKEY_USER_MAP` env)
+- Tek API key ile tek kullanici eslesir — farkli kullanicilar farkli key kullanmali
 - `webui.db` (SQLite) container icerisinde tutulur, kalicilik icin volume mount gerekir
-- Nginx'teki map'te olmayan kullanicilar 403 alir

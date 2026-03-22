@@ -1,0 +1,41 @@
+Bankai A.Ş. Operasyonel Risk Yönetimi Politikası
+
+1. Risk Tanımlama ve Sınıflandırma
+Operasyonel riskler beş kategoride değerlendirilir:
+- İç süreç riskleri: Hatalı işlem, yetersiz kontrol, süreç aksaklıkları
+- İnsan kaynağı riskleri: Personel hatası, dolandırıcılık, yetkinlik eksikliği
+- Sistem riskleri: Sistem arızası, siber saldırı, veri kaybı
+- Dış etken riskleri: Doğal afet, yasal değişiklik, tedarikçi riski
+- Uyum riskleri: Mevzuata aykırılık, regülatör yaptırımları
+
+2. Risk Değerlendirme Matrisi
+Riskler etki ve olasılık bazında 5x5 matris ile değerlendirilir.
+Etki seviyeleri: Çok Düşük (1), Düşük (2), Orta (3), Yüksek (4), Çok Yüksek (5)
+Olasılık seviyeleri: Nadir (1), Düşük (2), Olası (3), Yüksek (4), Kesin (5)
+Risk skoru = Etki x Olasılık
+Risk skoru 15 ve üzeri olanlar "Kritik Risk" olarak sınıflandırılır.
+Kritik riskler için aksiyon planı 5 iş günü içinde hazırlanmalıdır.
+
+3. Anahtar Risk Göstergeleri (KRI)
+Her birim için minimum 5 KRI tanımlanmalıdır.
+KRI'lar aylık olarak raporlanır.
+Eşik değerleri aşıldığında otomatik eskalasyon yapılır.
+KRI örnekleri:
+- İşlem hata oranı (hedef: <%0.1)
+- Sistem kesinti süresi (hedef: <4 saat/ay)
+- Müşteri şikayet sayısı (hedef: <50/ay)
+- Çalışan devir oranı (hedef: <%10/yıl)
+- Açık denetim bulgusu sayısı (hedef: <5)
+
+4. Olay Yönetimi
+Operasyonel kayıp olayları 24 saat içinde risk yönetimi birimine bildirilmelidir.
+50.000 TL üzeri kayıplar Yönetim Kurulu'na raporlanır.
+Her olay için kök neden analizi (Root Cause Analysis) yapılır.
+Tekrarlayan olaylar için süreç iyileştirme projesi başlatılır.
+
+5. İş Sürekliliği Planlaması (BCP)
+Kritik iş süreçleri için BCP dokümanları hazırlanır.
+BCP testleri yılda en az 2 kez yapılır.
+Felaket kurtarma (DR) merkezi farklı bir coğrafi bölgede olmalıdır.
+Kritik sistemler için failover süresi maksimum 2 saattir.
+Pandemi, deprem ve siber saldırı senaryoları için ayrı planlar mevcuttur.

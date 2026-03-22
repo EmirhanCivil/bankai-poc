@@ -1,0 +1,36 @@
+Bankai A.Ş. Piyasa Riski Yönetimi Politikası
+
+1. Risk Ölçüm Metodolojisi
+Piyasa riski ölçümünde Value at Risk (VaR) yöntemi kullanılır.
+VaR hesaplamasında %99 güven aralığı ve 10 günlük elde tutma süresi baz alınır.
+Hesaplama yöntemi: Historical Simulation (Tarihsel Simülasyon)
+Gözlem penceresi: Son 250 iş günü
+VaR limiti: Özkaynaklarının %5'ini aşamaz.
+
+2. Faiz Oranı Riski
+Faiz oranı duyarlılık analizi aylık olarak yapılır.
+100 baz puan paralel kayma senaryosu zorunludur.
+Durasyon gap limiti: +-2 yıl
+Net faiz geliri değişim limiti: %15
+Ekonomik değer değişim limiti: %20
+
+3. Kur Riski
+Açık pozisyon limiti özkaynaklarının %20'sini aşamaz.
+Tek para birimi pozisyon limiti: Özkaynaklarının %10'u
+Kur riski hedge oranı minimum %70 olmalıdır.
+Forward ve opsiyon işlemleri sadece hedging amaçlı yapılabilir.
+Egzotik türev ürünler Yönetim Kurulu onayı gerektirir.
+
+4. Likidite Riski
+Likidite karşılama oranı (LCR) minimum %100 olmalıdır.
+Net istikrarlı fonlama oranı (NSFR) minimum %100 olmalıdır.
+Likidite stres testi aylık olarak yapılır.
+Acil likidite planı (Contingency Funding Plan) güncel tutulmalıdır.
+Yüksek kaliteli likit varlık (HQLA) portföyü toplam varlıkların minimum %15'i olmalıdır.
+
+5. Raporlama
+Günlük VaR raporu saat 10:00'a kadar hazırlanır.
+Haftalık risk özet raporu Cuma günü yönetime sunulur.
+Aylık detaylı piyasa riski raporu Risk Komitesi'ne sunulur.
+Backtesting sonuçları üç aylık raporlanır.
+Yıllık olarak risk iştahı çerçevesi gözden geçirilir.

@@ -37,7 +37,7 @@ LibreChat, her API isteginin body'sindeki `user` alanina kullanicinin **MongoDB 
 {
   "model": "qwen2.5:7b-instruct",
   "messages": [{"role": "user", "content": "Izin suresi kac gun?"}],
-  "user": "69a491c78b6939fccb7a25b5"
+  "user": "aaa111bbb222ccc333ddd444"
 }
 ```
 
@@ -45,14 +45,14 @@ Gateway bu ObjectID'yi `LIBRECHAT_USERID_MAP` ile bankai kullanici adina cevirir
 
 ```python
 LIBRECHAT_USERID_MAP = {
-    "69a491c78b6939fccb7a25b5": "ali",
-    "69a4b5200f1399f96c7803ed": "ayse",
-    "69a4b5250f1399f96c7803f3": "veli",
+    "aaa111bbb222ccc333ddd444": "ali",
+    "bbb222ccc333ddd444eee555": "ayse",
+    "ccc333ddd444eee555fff666": "veli",
 }
 ```
 
 **Cozumleme akisi:**
-1. `req.user` alinir (`"69a491c78b6939fccb7a25b5"`)
+1. `req.user` alinir (`"aaa111bbb222ccc333ddd444"`)
 2. `USER_ROLE_MAP`'te dogrudan aranir — bulunamaz
 3. `LIBRECHAT_USERID_MAP`'te aranir — `"ali"` bulunur
 4. `ali` icin roller cikarilir: `["hr"]`
@@ -69,7 +69,7 @@ registration:
 endpoints:
   custom:
     - name: "Bankai RAG"
-      apiKey: "sk-bankai"
+      apiKey: "${LIBRECHAT_API_KEY}"
       baseURL: "http://host.docker.internal:8000/v1"
       models:
         default: ["qwen2.5:7b-instruct"]
@@ -85,7 +85,7 @@ endpoints:
 ```
 
 **Aciklamalar:**
-- `apiKey: "sk-bankai"` — Gateway'e gonderilen API key. Fallback olarak `APIKEY_USER_MAP`'te `ali`'ye eslenir, ancak asil cozumleme `user` alanindaki ObjectID uzerinden yapilir.
+- `apiKey: "${LIBRECHAT_API_KEY}"` — Gateway'e gonderilen API key. `librechat/.env`'de tanimlanir. Fallback olarak `APIKEY_USER_MAP`'te eslenir, ancak asil cozumleme `user` alanindaki ObjectID uzerinden yapilir.
 - `baseURL` — `host.docker.internal` sayesinde Docker icerisinden host makinedeki gateway'e erisilir.
 - `dropParams` — Gateway'in desteklemedigi OpenAI parametreleri atilir.
 - `summarize: false` — Ozet olusturma devre disi (gereksiz LLM cagrisi onlenir).
@@ -120,8 +120,8 @@ services:
 
 ## API Key
 
-- **Kullanilan key:** `sk-bankai`
-- Bu key `APIKEY_USER_MAP`'te `ali`'ye eslenmiştir (fallback)
+- **Kullanilan key:** `librechat/.env`'deki `LIBRECHAT_API_KEY` degeri
+- Bu key `APIKEY_USER_MAP`'te ilgili kullaniciya eslenmelidir (fallback)
 - **Asil kimlik cozumleme:** `user` alanindaki MongoDB ObjectID kullanilir
 - PoC degeridir, production'da her kullanicinin kendi key'i olmalidir
 

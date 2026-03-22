@@ -1,0 +1,30 @@
+Bankai A.Ş. Altyapı Yönetimi Prosedürleri
+
+1. Sunucu Yönetimi
+Tüm sunucular merkezi izleme sistemi (Zabbix/Prometheus) ile takip edilir.
+CPU kullanımı %85'i aştığında otomatik uyarı gönderilir.
+Disk doluluk oranı %90'ı geçtiğinde acil müdahale gereklidir.
+İşletim sistemi yamaları her ayın ilk Cumartesi günü uygulanır.
+Kritik güvenlik yamaları 72 saat içinde uygulanmalıdır.
+
+2. Ağ Yönetimi
+Şirket ağı VLAN segmentasyonu ile ayrılmıştır.
+Üretim (production), geliştirme (development) ve test ortamları fiziksel olarak ayrıdır.
+Firewall kuralları üç aylık periyotlarla gözden geçirilir.
+IDS/IPS sistemleri 7/24 aktiftir.
+Bant genişliği minimum %30 boş kapasite ile planlanır.
+
+3. Yedekleme Politikası
+Veritabanları günlük tam yedek, saatlik artırımlı (incremental) yedek alınır.
+Dosya sunucuları haftalık tam yedek alınır.
+Yedekler farklı bir lokasyonda (off-site) saklanır.
+Yedek geri yükleme testi üç ayda bir yapılır.
+Kritik sistemler için RPO (Recovery Point Objective) maksimum 1 saattir.
+RTO (Recovery Time Objective) kritik sistemler için maksimum 4 saattir.
+
+4. Bulut Altyapısı
+AWS ve Azure üzerinde multi-cloud strateji uygulanır.
+Bulut kaynakları Terraform ile IaC (Infrastructure as Code) olarak yönetilir.
+Aylık bulut maliyet optimizasyonu raporu hazırlanır.
+Kullanılmayan kaynaklar otomatik olarak kapatılır (auto-scaling).
+Bulut güvenlik konfigürasyonları CIS Benchmark'larına uygun olmalıdır.

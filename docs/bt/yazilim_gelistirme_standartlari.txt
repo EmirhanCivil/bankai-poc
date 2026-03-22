@@ -1,0 +1,36 @@
+Bankai A.Ş. Yazılım Geliştirme Standartları
+
+1. Geliştirme Süreci
+Tüm projeler Agile/Scrum metodolojisi ile yönetilir.
+Sprint süresi 2 haftadır.
+Her sprint sonunda demo ve retrospektif toplantısı yapılır.
+Code review olmadan hiçbir kod main branch'e merge edilemez.
+En az 2 kıdemli geliştiricinin onayı gereklidir.
+
+2. Versiyon Kontrolü
+Git kullanımı zorunludur.
+Branch isimlendirme: feature/JIRA-123-kisa-aciklama formatında olmalıdır.
+Commit mesajları Conventional Commits standardına uygun olmalıdır.
+Main branch'e doğrudan push yasaktır.
+Release branch'leri semantic versioning (semver) kullanır.
+
+3. Test Gereksinimleri
+Birim test kapsam oranı minimum %80 olmalıdır.
+Entegrasyon testleri CI/CD pipeline'ında otomatik çalışır.
+Güvenlik taraması (SAST/DAST) her deployment öncesi zorunludur.
+Performans testleri aylık olarak yapılır.
+Yük testlerinde sistem 1000 eşzamanlı kullanıcıyı desteklemelidir.
+
+4. Deployment Prosedürü
+Tüm deployment'lar CI/CD pipeline üzerinden yapılır.
+Production deployment'lar yalnızca Salı ve Çarşamba günleri yapılabilir.
+Deployment öncesi rollback planı hazırlanmalıdır.
+Blue-green deployment stratejisi kullanılır.
+Deployment sonrası 2 saat monitoring zorunludur.
+
+5. Veritabanı Standartları
+Veritabanı şema değişiklikleri migration script'leri ile yapılır.
+Tüm tablolarda created_at ve updated_at alanları bulunmalıdır.
+Kişisel veriler AES-256 ile şifrelenerek saklanır.
+Veritabanı yedekleri günlük olarak alınır ve 30 gün saklanır.
+Sorgu performans limiti: kritik sorgular 100ms altında yanıt vermelidir.

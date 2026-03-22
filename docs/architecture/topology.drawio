@@ -39,20 +39,20 @@
         </mxCell>
 
         <!-- Proxy Layer Label -->
-        <mxCell id="layer_proxy" value="Proxy Katmani" style="text;html=1;fontSize=14;fontStyle=1;fontColor=#666666;align=left;" vertex="1" parent="1">
-          <mxGeometry x="300" y="80" width="140" height="30" as="geometry" />
+        <mxCell id="layer_proxy" value="Proxy Katmani (opsiyonel)" style="text;html=1;fontSize=14;fontStyle=1;fontColor=#999999;align=left;" vertex="1" parent="1">
+          <mxGeometry x="300" y="80" width="180" height="30" as="geometry" />
         </mxCell>
 
-        <!-- Nginx -->
-        <mxCell id="nginx" value="&lt;b&gt;Nginx&lt;/b&gt;&lt;br&gt;:8080&lt;br&gt;&lt;i&gt;(Docker)&lt;/i&gt;&lt;br&gt;Header Injection" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="1">
+        <!-- Nginx (opsiyonel) -->
+        <mxCell id="nginx" value="&lt;b&gt;Nginx&lt;/b&gt;&lt;br&gt;:8080&lt;br&gt;&lt;i&gt;(Docker — opsiyonel)&lt;/i&gt;&lt;br&gt;Header Injection" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;dashed=1;opacity=60;" vertex="1" parent="1">
           <mxGeometry x="310" y="120" width="160" height="80" as="geometry" />
         </mxCell>
 
-        <!-- OpenWebUI -> Nginx (aktif - RBAC icin zorunlu) -->
-        <mxCell id="ow_nginx" style="endArrow=classic;html=1;strokeColor=#d6b656;strokeWidth=2;" edge="1" source="openwebui" target="nginx" parent="1">
+        <!-- OpenWebUI -> Gateway (dogrudan, Nginx'i atlar) -->
+        <mxCell id="ow_gw" style="endArrow=classic;html=1;strokeColor=#6c8ebf;strokeWidth=2;" edge="1" source="openwebui" target="gateway" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="ow_nginx_label" value=":8080/v1" style="edgeLabel;html=1;fontSize=10;fontColor=#d6b656;" vertex="1" connectable="0" parent="ow_nginx">
+        <mxCell id="ow_gw_label" value="sk-dummy + :8000/v1" style="edgeLabel;html=1;fontSize=10;fontColor=#6c8ebf;" vertex="1" connectable="0" parent="ow_gw">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
@@ -66,7 +66,7 @@
           <mxGeometry x="540" y="160" width="200" height="90" as="geometry" />
         </mxCell>
 
-        <!-- OpenWebUI -> Gateway yok, Nginx uzerinden gidiyor -->
+        <!-- OpenWebUI -> Gateway dogrudan baglanir (Nginx kullanilmaz) -->
 
         <!-- LibreChat -> Gateway -->
         <mxCell id="lc_gw" style="endArrow=classic;html=1;strokeColor=#6c8ebf;strokeWidth=2;" edge="1" source="librechat" target="gateway" parent="1">
@@ -76,11 +76,11 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <!-- Nginx -> Gateway -->
-        <mxCell id="ng_gw" style="endArrow=classic;html=1;strokeColor=#d6b656;strokeWidth=2;" edge="1" source="nginx" target="gateway" parent="1">
+        <!-- Nginx -> Gateway (opsiyonel - harici istemciler icin) -->
+        <mxCell id="ng_gw" style="endArrow=classic;html=1;strokeColor=#d6b656;strokeWidth=1;dashed=1;opacity=60;" edge="1" source="nginx" target="gateway" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="ng_gw_label" value="X-User, X-Roles, X-Tenant" style="edgeLabel;html=1;fontSize=10;fontColor=#d6b656;" vertex="1" connectable="0" parent="ng_gw">
+        <mxCell id="ng_gw_label" value="X-User, X-Roles, X-Tenant (opsiyonel)" style="edgeLabel;html=1;fontSize=10;fontColor=#999999;" vertex="1" connectable="0" parent="ng_gw">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 

@@ -1,0 +1,34 @@
+Bankai A.Ş. Bilgi Güvenliği Politikası
+
+1. Şifre Politikası
+Tüm çalışanlar en az 12 karakter uzunluğunda, büyük harf, küçük harf, rakam ve özel karakter içeren şifre kullanmak zorundadır.
+Şifreler her 90 günde bir değiştirilmelidir.
+Son 12 şifre tekrar kullanılamaz.
+Üst üste 5 başarısız giriş denemesinde hesap otomatik olarak kilitlenir.
+Kilitli hesaplar yalnızca BT Güvenlik ekibi tarafından açılabilir.
+
+2. Uzaktan Erişim Politikası
+Şirket sistemlerine uzaktan erişim yalnızca VPN üzerinden yapılabilir.
+VPN bağlantısı için iki faktörlü kimlik doğrulama (2FA) zorunludur.
+Kişisel cihazlardan erişim için MDM (Mobile Device Management) yazılımı kurulu olmalıdır.
+Halka açık Wi-Fi ağlarından doğrudan erişim kesinlikle yasaktır.
+Uzaktan erişim logları 1 yıl süreyle saklanır.
+
+3. Veri Sınıflandırma
+Şirket verileri dört kategoride sınıflandırılır:
+- Çok Gizli: Yönetim kurulu kararları, stratejik planlar, birleşme/devralma bilgileri
+- Gizli: Müşteri verileri, finansal raporlar, personel bilgileri
+- Dahili: İç prosedürler, eğitim materyalleri, toplantı notları
+- Genel: Basın bültenleri, kamuya açık bilgiler
+
+4. E-posta Güvenliği
+Şirket dışına gönderilen e-postalarda DLP (Data Loss Prevention) kontrolü uygulanır.
+Gizli ve üstü veri içeren e-postalar şifrelenerek gönderilmelidir.
+Toplu e-posta gönderimleri BT onayı gerektirir.
+Şüpheli e-postalar derhal infosec@bankai.com adresine bildirilmelidir.
+
+5. Olay Müdahale Prosedürü
+Güvenlik ihlali tespit edildiğinde ilk 15 dakika içinde BT Güvenlik ekibine bildirim yapılmalıdır.
+Kritik seviye olaylar için SOME (Siber Olaylara Müdahale Ekibi) devreye girer.
+Olay raporları 48 saat içinde tamamlanmalıdır.
+Yılda en az 2 kez siber güvenlik tatbikatı yapılır.

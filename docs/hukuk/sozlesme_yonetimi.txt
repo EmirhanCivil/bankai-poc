@@ -1,0 +1,38 @@
+Bankai A.Ş. Sözleşme Yönetimi Prosedürü
+
+1. Sözleşme Hazırlama
+Tüm sözleşmeler Hukuk Birimi tarafından hazırlanır veya onaylanır.
+Standart sözleşme şablonları kullanılmalıdır.
+Şablondan sapma durumunda Hukuk Birimi'nin yazılı onayı gereklidir.
+Sözleşme değeri 500.000 TL üzeri ise Genel Müdür onayı zorunludur.
+Sözleşme değeri 5.000.000 TL üzeri ise Yönetim Kurulu onayı gereklidir.
+
+2. Sözleşme İnceleme Süreci
+Standart sözleşmeler 3 iş günü içinde incelenir.
+Karmaşık sözleşmeler 10 iş günü içinde incelenir.
+Uluslararası sözleşmeler 15 iş günü içinde incelenir.
+İnceleme sırasında kontrol edilecek kritik maddeler:
+- Sorumluluk ve tazminat sınırları
+- Fesih koşulları ve bildirim süreleri
+- Fikri mülkiyet hakları
+- Gizlilik yükümlülükleri
+- Uyuşmazlık çözüm mekanizması
+- Cezai şartlar
+
+3. İmza Yetkileri
+100.000 TL'ye kadar: Birim Müdürü
+100.000-500.000 TL: Genel Müdür Yardımcısı
+500.000-5.000.000 TL: Genel Müdür
+5.000.000 TL üzeri: Yönetim Kurulu
+
+4. Sözleşme Arşivleme
+Tüm sözleşmelerin asıl nüshaları Hukuk Birimi kasasında saklanır.
+Dijital kopyalar sözleşme yönetim sistemi (CLM) üzerinde tutulur.
+Sözleşmeler sona erdikten sonra 10 yıl süreyle arşivlenir.
+Gizli sözleşmelere erişim yalnızca yetkilendirilmiş personele açıktır.
+
+5. Sözleşme Yenileme ve Fesih
+Sözleşme bitiş tarihinden 90 gün önce otomatik uyarı gönderilir.
+Otomatik yenileme maddeleri ayrıca değerlendirilir.
+Fesih bildirimleri noter aracılığıyla yapılır.
+Fesih sonrası hak ve yükümlülükler 30 gün içinde tasfiye edilir.

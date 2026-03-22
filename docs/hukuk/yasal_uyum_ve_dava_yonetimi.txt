@@ -1,0 +1,39 @@
+Bankai A.Ş. Yasal Uyum ve Dava Yönetimi Politikası
+
+1. Yasal Uyum İzleme
+Mevzuat değişiklikleri günlük olarak Resmi Gazete'den takip edilir.
+BDDK, SPK, TCMB, MASAK düzenlemeleri ayrıca izlenir.
+Mevzuat değişikliklerinin etkisi 10 iş günü içinde analiz edilir.
+Etki analizi sonuçları ilgili birimlere yazılı olarak bildirilir.
+Uyum takvimi üç aylık periyotlarla güncellenir.
+
+2. Dava Yönetimi
+Şirket aleyhine açılan davalar 48 saat içinde Hukuk Birimi'ne bildirilmelidir.
+Dava dosyaları dijital ortamda dava yönetim sisteminde takip edilir.
+Her dava için risk değerlendirmesi yapılır:
+- Düşük risk: Kaybetme olasılığı <%25
+- Orta risk: Kaybetme olasılığı %25-%50
+- Yüksek risk: Kaybetme olasılığı >%50
+Yüksek riskli davalar için karşılık ayrılır.
+Dava sonuçları aylık olarak Yönetim Kurulu'na raporlanır.
+
+3. Fikri Mülkiyet Hakları
+Şirket marka tescilleri Hukuk Birimi tarafından takip edilir.
+Yazılım lisansları yıllık olarak denetlenir.
+Patent başvuruları Hukuk Birimi koordinasyonunda yapılır.
+Telif hakkı ihlalleri tespit edildiğinde derhal hukuki süreç başlatılır.
+Çalışanların ürettiği fikri mülkiyet hakları iş sözleşmesi kapsamında şirkete aittir.
+
+4. Veri Koruma ve Gizlilik
+KVKK kapsamında veri işleme envanteri güncel tutulur.
+Kişisel veri ihlali durumunda 72 saat içinde Kişisel Verileri Koruma Kurulu'na bildirim yapılır.
+Veri sahibi başvuruları 30 gün içinde yanıtlanır.
+Yurt dışına veri aktarımı için Kurul'un belirlediği yeterlilik koşulları sağlanmalıdır.
+Çalışanlara yılda en az 1 kez KVKK eğitimi verilir.
+
+5. Regülatör İlişkiler
+BDDK denetim talepleri 5 iş günü içinde yanıtlanır.
+SPK bilgi talepleri 3 iş günü içinde yanıtlanır.
+MASAK şüpheli işlem bildirimleri derhal yapılır.
+Regülatör cezalar ve yaptırımlar Yönetim Kurulu'na anlık raporlanır.
+İdari para cezalarına itiraz süresi 60 gündür.

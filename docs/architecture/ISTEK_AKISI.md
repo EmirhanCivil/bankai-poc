@@ -18,7 +18,7 @@ Bu dokuman, bir kullanicinin soru sordugu andan cevabi ekranda gordugu ana kadar
 Kullanicinin yazdigi soruyu alir, bir API istegine cevirir ve gateway'e gonderir.
 
 ### LibreChat'te olan:
-ali, LibreChat'e email/sifre ile giris yapmistir. LibreChat bu kullaniciyi MongoDB'de tutar. ali'nin MongoDB'deki ID'si `69a491c78b6939fccb7a25b5`'dir.
+ali, LibreChat'e email/sifre ile giris yapmistir. LibreChat bu kullaniciyi MongoDB'de tutar. ali'nin MongoDB'deki ID'si `aaa111bbb222ccc333ddd444`'dir.
 
 ali soruyu yazip Enter'a bastiginda, LibreChat su HTTP istegini olusturur:
 
@@ -32,7 +32,7 @@ Content-Type: application/json
   "messages": [
     {"role": "user", "content": "Yillik izin suresi kac gun?"}
   ],
-  "user": "69a491c78b6939fccb7a25b5",
+  "user": "aaa111bbb222ccc333ddd444",
   "stream": true
 }
 ```
@@ -46,12 +46,11 @@ Dikkat edilecek noktalar:
 ### OpenWebUI'da olan:
 ali, OpenWebUI'a email/sifre ile giris yapmistir. OpenWebUI bu kullaniciyi SQLite'da (`webui.db`) tutar.
 
-ali soruyu yazip Enter'a bastiginda, OpenWebUI su HTTP istegini **Nginx'e** gonderir:
+ali soruyu yazip Enter'a bastiginda, OpenWebUI su HTTP istegini **dogrudan Gateway'e** gonderir:
 
 ```
-POST http://host.docker.internal:8080/v1/chat/completions
-Authorization: Bearer dummy
-X-OpenWebUI-User-Name: ali
+POST http://host.docker.internal:8000/v1/chat/completions
+Authorization: Bearer sk-dummy
 Content-Type: application/json
 
 {
@@ -64,10 +63,14 @@ Content-Type: application/json
 ```
 
 Dikkat edilecek noktalar:
-- Nginx'e gidiyor (`:8080`), dogrudan gateway'e degil
-- `X-OpenWebUI-User-Name: ali` header'i gonderiliyor
-- Nginx bu header'i okuyup `X-User: ali`, `X-Roles: hr`, `X-Tenant: hr` enjekte ederek gateway'e iletiyor
-- Bu sayede RBAC calisiyor — her kullanici kendi ekibinin dokumanlarini goruyor
+- Dogrudan gateway'e gidiyor (`:8000`), Nginx'i **atliyor**
+- OpenWebUI, OpenAI-uyumlu API'lere `X-OpenWebUI-User-Name` header'i **gondermez**
+- Gateway, `Authorization: Bearer sk-dummy` header'indan API key'i cikarir
+- `APIKEY_USER_MAP` tablosunda `sk-dummy` → `ali` olarak cozumlenir
+- Bu sayede RBAC calisiyor — her API key bir kullaniciya baglidir
+
+> **Not:** Nginx (:8080) opsiyonel olarak mevcuttur. UI'lar tarafindan kullanilmaz,
+> yalnizca harici istemciler (curl, Postman vb.) icin header injection ile RBAC saglar.
 
 ### Bu asamada kullanilan veritabani:
 | UI | Veritabani | Ne tutar? |
@@ -97,15 +100,16 @@ Gelen istekteki bilgilerden "bu kim?" sorusunu cevaplar.
 Gateway birden fazla kaynaga bakar, ilk bulduguyla devam eder:
 
 ```
-1. X-User header'i var mi?           → "ali" (Nginx koyar — OpenWebUI akisinda kullaniliyor!)
-2. X-OpenWebUI-User-Name header'i?   → (OpenWebUI gonderir, ama Nginx zaten X-User'a cevirir)
-3. body.user bilinen bir isim mi?    → "ali", "ayse", "veli" mi diye bakar
-4. body.user bir ObjectID mi?        → "69a491c78b6939fccb7a25b5" → LIBRECHAT_USERID_MAP'te arar → "ali"
-5. API key'den cikarilabilir mi?     → "sk-bankai" → APIKEY_USER_MAP'te arar → "ali"
-6. Hicbiri bulunamadi                → "anonymous"
+1. X-User header'i var mi?           → (Nginx veya harici istemci koyar — opsiyonel)
+2. X-OpenWebUI-User-Name header'i?   → (OpenWebUI OpenAI API'ye gondermez, opsiyonel)
+3. X-OpenWebUI-User-Email header'i?  → (opsiyonel)
+4. body.user bilinen bir isim mi?    → "ali", "ayse", "veli" mi diye bakar
+5. body.user bir ObjectID mi?        → "aaa111bbb222ccc333ddd444" → LIBRECHAT_USERID_MAP'te arar → "ali"
+6. API key'den cikarilabilir mi?     → "sk-dummy" → APIKEY_USER_MAP'te arar → "ali" (OpenWebUI bu yolu kullanir)
+7. Hicbiri bulunamadi                → "anonymous"
 ```
 
-**Bizim ornekte:** body.user = `69a491c78b6939fccb7a25b5` → map'te aranir → **ali** bulunur.
+**Bizim ornekte:** body.user = `aaa111bbb222ccc333ddd444` → map'te aranir → **ali** bulunur.
 
 ### Sonra roller cikarilir:
 ```python
@@ -251,7 +255,7 @@ Yerel (local) LLM calistirma araci. Bizim durumda Windows host uzerinde calisiyo
 Gateway, Ollama'ya su istegi gonderir:
 
 ```
-POST http://172.25.176.1:11434/api/chat
+POST http://<OLLAMA_HOST>:11434/api/chat
 
 {
   "model": "qwen2.5:7b-instruct",
@@ -424,29 +428,21 @@ ali "Yillik izin suresi kac gun?" yazar
     v
 [OPENWEBUI]  (:3000)
     | Kullanici bilgisi: SQLite'dan alinir
-    | HTTP istegi olusturulur (header: X-OpenWebUI-User-Name: ali)
-    |
-    v
-[NGINX]  (:8080)
-    | X-OpenWebUI-User-Name: ali header'ini okur
-    | Map kurallari: ali → hr → hr
-    | Header enjekte eder: X-User: ali, X-Roles: hr, X-Tenant: hr
+    | HTTP istegi olusturulur (Authorization: Bearer sk-dummy)
+    | NOT: Nginx'i atlar, dogrudan gateway'e gider
     |
     v
 [GATEWAY]  (:8000)  ← app_main.py
     |
     |─ (1) Kullanici Cozumleme
-    |      X-User: ali header'i var → dogrudan "ali" olarak cozumlenir
-    |      (X-User ilk oncelikli kaynak — Nginx zaten cozumledi)
+    |      X-User yok, X-OpenWebUI-User-Name yok, body.user yok
+    |      API key fallback: sk-dummy → APIKEY_USER_MAP → "ali"
+    |      ali → USER_ROLE_MAP → roller: ["hr"] → tenant: "hr"
     |
     |─ (2) DLP Giris → (3) OPA → (4) Qdrant → (5) Ollama → (6) DLP Cikis → (7) Audit
     |      (LibreChat akisiyla ayni adimlar)
     |
     |─ (8) Cevap Dondur (SSE stream)
-    |
-    v
-[NGINX]  (:8080)
-    | Cevabi OpenWebUI'ya iletir
     |
     v
 [OPENWEBUI]
@@ -467,7 +463,7 @@ ali ekranda cevabi gorur: "Yillik ucretli izin suresi 14 gundur. Kaynak: [1]"
 | **OpenWebUI** | Chat UI | 3000 | Ayni isi yapar, farkli arayuz |
 | **MongoDB** | Veritabani | 27017 | LibreChat'in kullanici/sohbet verilerini tutar |
 | **SQLite** | Veritabani | - | OpenWebUI'nin kullanici/sohbet verilerini tutar (dosya) |
-| **Nginx** | Reverse Proxy | 8080 | OpenWebUI icin kullanici/rol/tenant header'i enjekte eder (RBAC) |
+| **Nginx** | Reverse Proxy (opsiyonel) | 8080 | Harici istemciler icin kullanici/rol/tenant header'i enjekte eder (UI'lar kullanmaz) |
 | **Gateway** | API Sunucusu | 8000 | Her seyin merkezi: kimlik, yetki, arama, LLM, audit |
 | **OPA** | Policy Engine | 8181 | "Bu kullanici buna erisebilir mi?" sorusunu cevaplar |
 | **Qdrant** | Vektor DB | 6333 | Soruya en benzer dokuman parcalarini bulur |
